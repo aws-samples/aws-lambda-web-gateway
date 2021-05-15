@@ -1,0 +1,25 @@
+[package]
+name = "lambda-gateway"
+version = "0.1.0"
+authors = ["Harold Sun <sunhua@amazon.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+base64 = "0.13.0"
+bytes = "0.5.6"
+log = "0.4.14"
+env_logger = "0.8.3"
+futures = "0.3.14"
+rustls = "0.19.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1"
+url = "2.2.1"
+actix-web = { version = "3.3.2", features = ["rustls"] }
+rusoto_core = {version = "0.45.0", default_features = false, features=["rustls"]}
+rusoto_lambda = {version = "0.45.0", default_features = false, features=["rustls"]}
+
+[[bin]]
+name = "lambda-gateway"
+path = "src/main.rs"
