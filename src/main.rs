@@ -5,12 +5,14 @@ use actix_web::{
     http, http::HeaderMap, http::StatusCode, middleware, web, App, Error, HttpRequest,
     HttpResponse, HttpServer,
 };
-use bytes::Bytes;
+use aws_config::BehaviorVersion;
+use aws_sdk_lambda::types::InvocationType;
+use aws_sdk_lambda::Client;
+use aws_sdk_lambda::error::SdkError;
+use aws_smithy_types::Blob;
 use env_logger::Env;
 use futures::StreamExt;
 use log::*;
-use rusoto_core::Region;
-use rusoto_lambda::{InvocationRequest, Lambda, LambdaClient};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use url::form_urlencoded;
@@ -19,21 +21,22 @@ use url::form_urlencoded;
 async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
 
-    let client = LambdaClient::new(Region::default());
+    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let client = Client::new(&config);
 
     HttpServer::new(move || {
         App::new()
             .wrap(middleware::Logger::default())
-            .data(client.clone())
+            .app_data(web::Data::new(client.clone()))
             .route("/healthz", web::get().to(|| HttpResponse::Ok()))
             .route("/*", web::to(handler))
     })
-    .bind("0.0.0.0:8080")?
-    .run()
-    .await
+        .bind("0.0.0.0:8000")?
+        .run()
+        .await
 }
 
-async fn handler(req: HttpRequest, mut payload: web::Payload, client: web::Data<LambdaClient>) -> Result<HttpResponse, Error> {
+async fn handler(req: HttpRequest, mut payload: web::Payload, client: web::Data<Client>) -> Result<HttpResponse, Error> {
     // extract request data
     let http_method = req.method();
     let headers = req.headers();
@@ -51,7 +54,7 @@ async fn handler(req: HttpRequest, mut payload: web::Payload, client: web::Data<
         content_type = "application/json";
     }
 
-    // determine if the body should be based64 encoded
+    // determine if the body should be base64 encoded
     let is_base64_encoded;
     match content_type {
         "application/json" => is_base64_encoded = false,
@@ -90,27 +93,30 @@ async fn handler(req: HttpRequest, mut payload: web::Payload, client: web::Data<
             },
         },
     })
-    .to_string();
+        .to_string();
 
     debug!("lambda_request_body = {:#?}", lambda_request_body);
 
-    let request = InvocationRequest {
-        function_name: env::var("LAMBDA_FUNCTION_NAME").unwrap(),
-        payload: Some(Bytes::from(lambda_request_body.to_owned())),
-        ..Default::default()
-    };
+    let resp = client
+        .invoke()
+        .function_name(env::var("LAMBDA_FUNCTION_NAME").unwrap())
+        .invocation_type(InvocationType::RequestResponse)
+        .payload(Blob::new(lambda_request_body))
+        .send()
+        .await;
 
-    match client.invoke(request).await {
-        Ok(result) => {
-            debug!("invocation response = {:#?}", result);
+    match resp {
+        Ok(output) => {
+            debug!("invocation response = {:#?}", output);
+            let payload = output.payload().unwrap();
             let lambda_response: LambdaResponse =
-                serde_json::from_slice(result.payload.unwrap().as_ref()).unwrap();
+                serde_json::from_slice(payload.as_ref()).unwrap();
             debug!("lambda_response = {:#?}", lambda_response);
 
             let mut http_response = HttpResponseBuilder::new(
                 StatusCode::from_u16(lambda_response.status_code).unwrap(),
             )
-            .body(lambda_response.body);
+                .body(lambda_response.body);
 
             lambda_response.headers.iter().map(|(k, v)| {
                 http_response
@@ -122,9 +128,13 @@ async fn handler(req: HttpRequest, mut payload: web::Payload, client: web::Data<
 
             Ok(http_response)
         }
-        Err(error) => {
+        Err(SdkError::ServiceError(error))  => {
             debug!("invocation error = {:#?}", error);
             Ok(HttpResponse::new(StatusCode::INTERNAL_SERVER_ERROR))
+        }
+        Err(error) => {
+            debug!("invocation error = {:#?}", error);
+            Err(().into())
         }
     }
 }

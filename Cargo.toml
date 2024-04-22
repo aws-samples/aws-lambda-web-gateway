@@ -17,8 +17,9 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
 url = "2.2.1"
 actix-web = { version = "3.3.2", features = ["rustls"] }
-rusoto_core = {version = "0.45.0", default_features = false, features=["rustls"]}
-rusoto_lambda = {version = "0.45.0", default_features = false, features=["rustls"]}
+aws-config = { version = "1.2.0" }
+aws-sdk-lambda = { version = "1.21.0" }
+aws-smithy-types = { version="1.1.8", features = ["serde-serialize"] }
 
 [[bin]]
 name = "lambda-gateway"
