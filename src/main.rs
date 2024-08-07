@@ -136,7 +136,7 @@ async fn handler(
         serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
     info!(metadata_prelude=?metadata_prelude);
 
-    let (tx, rx) = mpsc::channel(100);
+    let (tx, rx) = mpsc::channel(1);
 
     tokio::spawn({
         async move {
