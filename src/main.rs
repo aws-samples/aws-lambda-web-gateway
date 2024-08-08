@@ -24,7 +24,6 @@ use std::path::PathBuf;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tower_http::trace::TraceLayer;
-use tracing::info;
 
 #[derive(Clone)]
 struct ApplicationState {
@@ -57,7 +56,7 @@ async fn main() {
 
     let addr = "0.0.0.0:8000";
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
-    info!("Listening on {}", addr);
+    tracing::info!("Listening on {}", addr);
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -226,7 +225,7 @@ async fn handle_streaming_response(
     }
     let metadata_prelude_string = String::from_utf8(metadata_prelude_buffer).unwrap();
     let metadata_prelude: MetadataPrelude = serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
-    info!(metadata_prelude=?metadata_prelude);
+    tracing::debug!(metadata_prelude=?metadata_prelude);
 
     let (tx, rx) = mpsc::channel(1);
 
@@ -249,7 +248,7 @@ async fn handle_streaming_response(
         PayloadChunk(chunk) => match chunk.payload() {
             Some(data) => {
                 let bytes = data.clone().into_inner();
-                info!(data = ?String::from_utf8_lossy(&*bytes));
+                tracing::debug!(data = ?String::from_utf8_lossy(&*bytes));
                 Ok(Bytes::from(bytes))
             }
             None => Ok(Bytes::default()),
