@@ -131,7 +131,7 @@ async fn handler(
             handle_buffered_response(resp).await
         }
         LambdaInvokeMode::ResponseStreaming => {
-            let mut resp = client
+            let resp = client
                 .invoke_with_response_stream()
                 .function_name(config.lambda_function_name.as_str())
                 .invocation_type(ResponseStreamingInvocationType::RequestResponse)
@@ -139,7 +139,7 @@ async fn handler(
                 .send()
                 .await
                 .unwrap();
-            handle_streaming_response(&mut resp).await
+            handle_streaming_response(resp).await
         }
     };
 
@@ -189,7 +189,7 @@ async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::Invo
         .unwrap()
 }
 
-async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput) -> Response {
+async fn handle_streaming_response(mut resp: aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput) -> Response {
     // Handle streaming response
     let mut metadata_prelude_buffer = Vec::new();
     let mut remain_buffer = Vec::new();
@@ -226,7 +226,6 @@ async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_
 
     let (tx, rx) = mpsc::channel(1);
 
-    let event_stream = resp.event_stream.take().unwrap();
     tokio::spawn(async move {
         if remain_buffer.len() != 0 {
             let stream_update = InvokeResponseStreamUpdate::builder()
@@ -236,7 +235,7 @@ async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_
             let _ = tx.send(PayloadChunk(stream_update)).await;
         }
 
-        while let Some(event) = event_stream.recv().await.unwrap() {
+        while let Some(event) = resp.event_stream.recv().await.unwrap() {
             let _ = tx.send(event).await;
         }
     });

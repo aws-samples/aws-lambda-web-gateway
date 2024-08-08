@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub lambda_function_name: String,
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LambdaInvokeMode {
     Buffered,
     ResponseStreaming,
