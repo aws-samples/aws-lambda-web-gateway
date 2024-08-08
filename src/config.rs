@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
+use serde_yaml;
 use std::collections::HashSet;
+use std::fs;
+use std::path::Path;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -13,9 +16,6 @@ pub enum LambdaInvokeMode {
     Buffered,
     ResponseStreaming,
 }
-use std::fs;
-use std::path::Path;
-use serde_yaml;
 
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {

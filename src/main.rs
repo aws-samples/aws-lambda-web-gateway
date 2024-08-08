@@ -1,7 +1,7 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
-use std::path::PathBuf;
 use std::collections::HashMap;
+use std::path::PathBuf;
 
 #[derive(Clone)]
 struct ApplicationState {
@@ -42,10 +42,7 @@ async fn main() {
     let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = Client::new(&aws_config);
 
-    let app_state = ApplicationState {
-        client,
-        config,
-    };
+    let app_state = ApplicationState { client, config };
 
     let app = Router::new()
         .route("/healthz", get(health))
@@ -97,7 +94,12 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    if !config.api_keys.contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
+    if !config.api_keys.contains(
+        headers
+            .get("x-api-key")
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or_default(),
+    ) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
@@ -181,7 +183,9 @@ struct MetadataPrelude {
     pub cookies: Vec<String>,
 }
 
-async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
+async fn handle_buffered_response(
+    _resp: aws_sdk_lambda::operation::invoke::InvokeOutput,
+) -> Response {
     // Handle buffered response
     Response::builder()
         .status(StatusCode::OK)
@@ -189,7 +193,9 @@ async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::Invo
         .unwrap()
 }
 
-async fn handle_streaming_response(mut resp: aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput) -> Response {
+async fn handle_streaming_response(
+    mut resp: aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
+) -> Response {
     // Handle streaming response
     let mut metadata_prelude_buffer = Vec::new();
     let mut remain_buffer = Vec::new();
@@ -264,7 +270,9 @@ async fn handle_streaming_response(mut resp: aws_sdk_lambda::operation::invoke_w
     let resp_builder = metadata_prelude
         .cookies
         .iter()
-        .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie));
+        .fold(resp_builder, |builder, cookie| {
+            builder.header("set-cookie", cookie)
+        });
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
 }
