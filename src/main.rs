@@ -97,12 +97,13 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    if !config.api_keys.contains(
-        headers
-            .get("x-api-key")
-            .and_then(|v| v.to_str().ok())
-            .unwrap_or_default(),
-    ) {
+    let api_key = headers
+        .get("x-api-key")
+        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)))))
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or_default();
+
+    if !config.api_keys.contains(api_key) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
