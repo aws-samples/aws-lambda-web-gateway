@@ -9,7 +9,7 @@ use axum::body::Body;
 use axum::{
     body::Bytes,
     extract::{Path, Query, State},
-    http::{HeaderMap, HeaderValue, Method, StatusCode},
+    http::{HeaderMap, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::any,
     routing::get,
@@ -99,7 +99,7 @@ async fn handler(
 
     let api_key = headers
         .get("x-api-key")
-        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(Some).flatten())))
+        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(Some).flatten()).and_then(|s| headers.get(s))))
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
 
