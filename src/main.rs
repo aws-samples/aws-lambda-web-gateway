@@ -1,5 +1,7 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
+use std::path::PathBuf;
+use std::collections::HashMap;
 
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
@@ -82,7 +84,7 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    if !config.api_keys.contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
+    if !crate::config::Config::api_keys(&config).contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
@@ -104,11 +106,11 @@ async fn handler(
     })
     .to_string();
 
-    let resp = match config.lambda_invoke_mode {
+    let resp = match crate::config::Config::lambda_invoke_mode(&config) {
         LambdaInvokeMode::Buffered => {
             let resp = client
                 .invoke()
-                .function_name(&config.lambda_function_name)
+                .function_name(&crate::config::Config::lambda_function_name(&config))
                 .payload(Blob::new(lambda_request_body))
                 .send()
                 .await
@@ -118,7 +120,7 @@ async fn handler(
         LambdaInvokeMode::ResponseStreaming => {
             let mut resp = client
                 .invoke_with_response_stream()
-                .function_name(&config.lambda_function_name)
+                .function_name(&crate::config::Config::lambda_function_name(&config))
                 .invocation_type(ResponseStreamingInvocationType::RequestResponse)
                 .payload(Blob::new(lambda_request_body))
                 .send()
@@ -242,7 +244,7 @@ struct MetadataPrelude {
     /// The HTTP cookies.
     pub cookies: Vec<String>,
 }
-async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
+async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
     // Handle buffered response
     Response::builder()
         .status(StatusCode::OK)
@@ -287,7 +289,7 @@ async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_
 
     let (tx, rx) = mpsc::channel(1);
 
-    let resp_clone = resp.clone();
+    let resp_clone = resp.as_mut().clone();
     tokio::spawn(async move {
         if remain_buffer.len() != 0 {
             let stream_update = InvokeResponseStreamUpdate::builder()
