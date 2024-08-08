@@ -226,7 +226,7 @@ async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_
 
     let (tx, rx) = mpsc::channel(1);
 
-    let event_stream = resp.event_stream.clone();
+    let event_stream = &mut resp.event_stream;
     tokio::spawn(async move {
         if remain_buffer.len() != 0 {
             let stream_update = InvokeResponseStreamUpdate::builder()
