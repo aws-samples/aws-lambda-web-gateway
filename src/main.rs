@@ -1,6 +1,5 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
-use axum::http::HeaderValue;
 use tracing::Span;
 use std::time::Duration;
 use aws_config::BehaviorVersion;
@@ -56,7 +55,7 @@ async fn main() {
         .route("/*path", any(handler))
         .layer(
             TraceLayer::new_for_http()
-                .on_request(|request: &Request<Body>, _span: &Span| {
+                .on_request(|_request: &Request<Body>, _span: &Span| {
                     // No logging on request
                 })
                 .on_response(|response: &Response, latency: Duration, _span: &Span| {
