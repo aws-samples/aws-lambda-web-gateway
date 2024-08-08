@@ -3,6 +3,11 @@ use crate::config::{Config, LambdaInvokeMode};
 use std::path::PathBuf;
 use std::collections::HashMap;
 
+struct ApplicationState {
+    client: aws_sdk_lambda::Client,
+    config: Config,
+}
+
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
 use aws_sdk_lambda::types::{InvokeResponseStreamUpdate, ResponseStreamingInvocationType};
@@ -36,12 +41,17 @@ async fn main() {
     let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = Client::new(&aws_config);
 
+    let app_state = ApplicationState {
+        client,
+        config,
+    };
+
     let app = Router::new()
         .route("/healthz", get(health))
         .route("/", any(handler))
         .route("/*path", any(handler))
         .layer(TraceLayer::new_for_http())
-        .with_state(client);
+        .with_state(app_state);
 
     let addr = "0.0.0.0:8000";
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
@@ -56,11 +66,13 @@ async fn health() -> impl IntoResponse {
 async fn handler(
     path: Option<Path<String>>,
     Query(query_string_parameters): Query<HashMap<String, String>>,
-    State(client): State<Client>,
+    State(state): State<ApplicationState>,
     method: Method,
     headers: HeaderMap,
     body: Bytes,
 ) -> Response {
+    let client = &state.client;
+    let config = &state.config;
     let path = "/".to_string() + path.map(|p| p.0).unwrap_or_default().as_str();
 
     let http_method = method.to_string();
@@ -84,7 +96,7 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    if !Config::api_keys(&config).contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
+    if !Config::api_keys(config).contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
@@ -106,11 +118,11 @@ async fn handler(
     })
     .to_string();
 
-    let resp = match Config::lambda_invoke_mode(&config) {
+    let resp = match Config::lambda_invoke_mode(config) {
         LambdaInvokeMode::Buffered => {
             let resp = client
                 .invoke()
-                .function_name(&Config::lambda_function_name(&config))
+                .function_name(&Config::lambda_function_name(config))
                 .payload(Blob::new(lambda_request_body))
                 .send()
                 .await
