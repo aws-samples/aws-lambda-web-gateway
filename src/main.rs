@@ -1,7 +1,5 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
-use clap::{Arg, Command, value_parser};
-use std::collections::HashSet;
 use std::collections::HashMap;
 use std::path::PathBuf;
 
