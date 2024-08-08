@@ -55,9 +55,6 @@ async fn main() {
         .route("/*path", any(handler))
         .layer(
             TraceLayer::new_for_http()
-                .on_request(|_request: &Request<Body>, _span: &Span| {
-                    // No logging on request
-                })
                 .on_response(|response: &Response, latency: Duration, _span: &Span| {
                     tracing::info!(
                         "{} {} {} {} {} {}",
