@@ -99,7 +99,7 @@ async fn handler(
 
     let api_key = headers
         .get("x-api-key")
-        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(|s| HeaderValue::from_str(s).ok()).flatten())))
+        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(|s| HeaderValue::from_str(s).ok()).flatten())).as_ref())
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
 
