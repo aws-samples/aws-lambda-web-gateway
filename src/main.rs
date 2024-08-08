@@ -1,5 +1,6 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
+use axum::http::HeaderValue;
 use tracing::Span;
 use std::time::Duration;
 use aws_config::BehaviorVersion;
@@ -61,12 +62,12 @@ async fn main() {
                 .on_response(|response: &Response, latency: Duration, _span: &Span| {
                     tracing::info!(
                         "{} {} {} {} {} {}",
-                        response.headers().get("X-Forwarded-For").unwrap_or(&HeaderValue::from_static("-")),
+                        response.headers().get("X-Forwarded-For").and_then(|v| v.to_str().ok()).unwrap_or("-"),
                         "-",
                         "-",
                         response.status().as_u16(),
                         latency.as_millis(),
-                        response.headers().get("Content-Length").unwrap_or(&HeaderValue::from_static("-"))
+                        response.headers().get("Content-Length").and_then(|v| v.to_str().ok()).unwrap_or("-")
                     );
                 })
         )
