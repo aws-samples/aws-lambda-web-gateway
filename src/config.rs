@@ -15,6 +15,7 @@ pub enum LambdaInvokeMode {
 }
 use std::fs;
 use std::path::Path;
+use serde_yaml;
 
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
