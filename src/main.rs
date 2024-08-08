@@ -1,14 +1,5 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
-use std::collections::HashMap;
-use std::path::PathBuf;
-
-#[derive(Clone)]
-struct ApplicationState {
-    client: aws_sdk_lambda::Client,
-    config: Config,
-}
-
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
 use aws_sdk_lambda::types::{InvokeResponseStreamUpdate, ResponseStreamingInvocationType};
@@ -28,10 +19,18 @@ use base64::Engine;
 use futures_util::stream::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::collections::HashMap;
+use std::path::PathBuf;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use tower_http::trace::TraceLayer;
 use tracing::info;
+
+#[derive(Clone)]
+struct ApplicationState {
+    client: aws_sdk_lambda::Client,
+    config: Config,
+}
 
 #[tokio::main]
 async fn main() {
@@ -188,14 +187,9 @@ struct MetadataPrelude {
     pub cookies: Vec<String>,
 }
 
-async fn handle_buffered_response(
-    _resp: aws_sdk_lambda::operation::invoke::InvokeOutput,
-) -> Response {
+async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
     // Handle buffered response
-    Response::builder()
-        .status(StatusCode::OK)
-        .body(Body::empty())
-        .unwrap()
+    Response::builder().status(StatusCode::OK).body(Body::empty()).unwrap()
 }
 
 async fn handle_streaming_response(
@@ -231,8 +225,7 @@ async fn handle_streaming_response(
         }
     }
     let metadata_prelude_string = String::from_utf8(metadata_prelude_buffer).unwrap();
-    let metadata_prelude: MetadataPrelude =
-        serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
+    let metadata_prelude: MetadataPrelude = serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
     info!(metadata_prelude=?metadata_prelude);
 
     let (tx, rx) = mpsc::channel(1);
@@ -275,9 +268,7 @@ async fn handle_streaming_response(
     let resp_builder = metadata_prelude
         .cookies
         .iter()
-        .fold(resp_builder, |builder, cookie| {
-            builder.header("set-cookie", cookie)
-        });
+        .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie));
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
 }

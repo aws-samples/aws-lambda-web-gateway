@@ -1,9 +1,9 @@
+use clap::{value_parser, Arg, Command};
 use serde::{Deserialize, Serialize};
 use serde_yaml;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
-use clap::{Arg, Command, value_parser};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -65,7 +65,8 @@ impl Config {
             "ResponseStream" => LambdaInvokeMode::ResponseStream,
             _ => return Err("Invalid invoke mode".into()),
         };
-        let api_keys: HashSet<String> = matches.get_many::<String>("api-keys")
+        let api_keys: HashSet<String> = matches
+            .get_many::<String>("api-keys")
             .unwrap()
             .map(|s| s.clone())
             .collect();
