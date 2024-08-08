@@ -35,7 +35,6 @@ use tokio_stream::wrappers::ReceiverStream;
 use tower_http::trace::TraceLayer;
 use tracing::info;
 
-fn parse_cli_args() -> Result<Config, Box<dyn std::error::Error>> {
     let matches = Command::new("lambda-gateway")
         .version("0.1.0")
         .author("Harold Sun <sunhua@amazon.com>")
@@ -91,7 +90,7 @@ fn parse_cli_args() -> Result<Config, Box<dyn std::error::Error>> {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let config = match parse_cli_args() {
+    let config = match Config::from_cli() {
         Ok(config) => config,
         Err(_) => {
             let config_path = PathBuf::from("config.yaml");
