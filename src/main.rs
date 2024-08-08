@@ -3,6 +3,7 @@ use crate::config::{Config, LambdaInvokeMode};
 use std::path::PathBuf;
 use std::collections::HashMap;
 
+#[derive(Clone)]
 struct ApplicationState {
     client: aws_sdk_lambda::Client,
     config: Config,
@@ -96,7 +97,7 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    if !Config::api_keys(config).contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
+    if !config.api_keys.contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
@@ -118,11 +119,11 @@ async fn handler(
     })
     .to_string();
 
-    let resp = match Config::lambda_invoke_mode(config) {
+    let resp = match config.lambda_invoke_mode {
         LambdaInvokeMode::Buffered => {
             let resp = client
                 .invoke()
-                .function_name(&Config::lambda_function_name(config))
+                .function_name(config.lambda_function_name.as_str())
                 .payload(Blob::new(lambda_request_body))
                 .send()
                 .await
@@ -132,7 +133,7 @@ async fn handler(
         LambdaInvokeMode::ResponseStreaming => {
             let mut resp = client
                 .invoke_with_response_stream()
-                .function_name(&Config::lambda_function_name(&config))
+                .function_name(config.lambda_function_name.as_str())
                 .invocation_type(ResponseStreamingInvocationType::RequestResponse)
                 .payload(Blob::new(lambda_request_body))
                 .send()
