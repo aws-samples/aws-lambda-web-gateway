@@ -1,4 +1,5 @@
-use std::{collections::HashMap, env, str, path::PathBuf};
+use std::{collections::HashMap, str, path::PathBuf};
+use crate::config::{Config, LambdaInvokeMode};
 
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
@@ -103,22 +104,28 @@ async fn handler(
     })
     .to_string();
 
-    let mut resp = match config.lambda_invoke_mode {
-        LambdaInvokeMode::Buffered => client
-            .invoke()
-            .function_name(&config.lambda_function_name)
-            .payload(Blob::new(lambda_request_body))
-            .send()
-            .await
-            .unwrap(),
-        LambdaInvokeMode::ResponseStreaming => client
-            .invoke_with_response_stream()
-            .function_name(&config.lambda_function_name)
-            .invocation_type(ResponseStreamingInvocationType::RequestResponse)
-            .payload(Blob::new(lambda_request_body))
-            .send()
-            .await
-            .unwrap(),
+    let resp = match config.lambda_invoke_mode {
+        LambdaInvokeMode::Buffered => {
+            let resp = client
+                .invoke()
+                .function_name(&config.lambda_function_name)
+                .payload(Blob::new(lambda_request_body))
+                .send()
+                .await
+                .unwrap();
+            handle_buffered_response(resp).await
+        }
+        LambdaInvokeMode::ResponseStreaming => {
+            let mut resp = client
+                .invoke_with_response_stream()
+                .function_name(&config.lambda_function_name)
+                .invocation_type(ResponseStreamingInvocationType::RequestResponse)
+                .payload(Blob::new(lambda_request_body))
+                .send()
+                .await
+                .unwrap();
+            handle_streaming_response(&mut resp).await
+        }
     };
 
     let mut metadata_prelude_buffer = Vec::new();
@@ -234,4 +241,93 @@ struct MetadataPrelude {
     pub headers: HeaderMap,
     /// The HTTP cookies.
     pub cookies: Vec<String>,
+}
+async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
+    // Handle buffered response
+    Response::builder()
+        .status(StatusCode::OK)
+        .body(Body::empty())
+        .unwrap()
+}
+
+async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput) -> Response {
+    // Handle streaming response
+    let mut metadata_prelude_buffer = Vec::new();
+    let mut remain_buffer = Vec::new();
+    'outer: while let Some(event) = resp.event_stream.recv().await.unwrap() {
+        match event {
+            PayloadChunk(chunk) => match chunk.payload() {
+                None => {}
+                Some(data) => {
+                    let mut null_count = 0;
+                    let bytes = data.clone().into_inner();
+                    let bytes_len = bytes.len();
+                    for i in 0..bytes_len {
+                        if bytes[i] != 0 {
+                            metadata_prelude_buffer.push(bytes[i]);
+                        } else {
+                            null_count += 1;
+                            if null_count == 8 {
+                                if i != bytes_len {
+                                    remain_buffer = bytes[i + 1..bytes_len].to_vec()
+                                }
+                                break 'outer;
+                            }
+                        }
+                    }
+                }
+            },
+            _ => {}
+        }
+    }
+    let metadata_prelude_string = String::from_utf8(metadata_prelude_buffer).unwrap();
+    let metadata_prelude: MetadataPrelude =
+        serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
+    info!(metadata_prelude=?metadata_prelude);
+
+    let (tx, rx) = mpsc::channel(1);
+
+    tokio::spawn({
+        async move {
+            if remain_buffer.len() != 0 {
+                let stream_update = InvokeResponseStreamUpdate::builder()
+                    .payload(Blob::new(remain_buffer))
+                    .build();
+
+                let _ = tx.send(PayloadChunk(stream_update)).await;
+            }
+
+            while let Some(event) = resp.event_stream.recv().await.unwrap() {
+                let _ = tx.send(event).await;
+            }
+        }
+    });
+
+    let stream = ReceiverStream::new(rx).map(|event| match event {
+        InvokeComplete(_) => Ok(Bytes::default()),
+        PayloadChunk(chunk) => match chunk.payload() {
+            Some(data) => {
+                let bytes = data.clone().into_inner();
+                info!(data = ?String::from_utf8_lossy(&*bytes));
+                Ok(Bytes::from(bytes))
+            }
+            None => Ok(Bytes::default()),
+        },
+        _ => Err("unknown events"),
+    });
+
+    let resp_builder = Response::builder().status(metadata_prelude.status_code);
+
+    let resp_builder = metadata_prelude
+        .headers
+        .iter()
+        .filter(|(k, _)| *k != "content-length")
+        .fold(resp_builder, |builder, (k, v)| builder.header(k, v));
+
+    let resp_builder = metadata_prelude
+        .cookies
+        .iter()
+        .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie));
+
+    resp_builder.body(Body::from_stream(stream)).unwrap()
 }
