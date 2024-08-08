@@ -36,7 +36,7 @@ impl Config {
                     .long("lambda-function-name")
                     .value_name("FUNCTION_NAME")
                     .help("Sets the Lambda function name")
-                    .required(true)
+                    .required(false)
                     .value_parser(value_parser!(String)),
             )
             .arg(
@@ -45,7 +45,7 @@ impl Config {
                     .long("lambda-invoke-mode")
                     .value_name("INVOKE_MODE")
                     .help("Sets the Lambda invoke mode")
-                    .required(true)
+                    .required(false)
                     .value_parser(["Buffered", "ResponseStream"]),
             )
             .arg(
@@ -54,7 +54,7 @@ impl Config {
                     .long("api-keys")
                     .value_name("API_KEYS")
                     .help("Sets the API keys")
-                    .required(true)
+                    .required(false)
                     .value_parser(value_parser!(String)),
             )
             .get_matches();
