@@ -132,7 +132,7 @@ async fn handler(
                 .unwrap();
             handle_buffered_response(resp).await
         }
-        LambdaInvokeMode::ResponseStreaming => {
+        LambdaInvokeMode::ResponseStream => {
             let resp = client
                 .invoke_with_response_stream()
                 .function_name(config.lambda_function_name.as_str())

@@ -14,7 +14,7 @@ pub struct Config {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LambdaInvokeMode {
     Buffered,
-    ResponseStreaming,
+    ResponseStream,
 }
 
 impl Config {
