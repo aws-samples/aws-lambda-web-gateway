@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, str};
+use std::{collections::HashMap, env, str, path::PathBuf};
 
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
@@ -28,8 +28,10 @@ use tracing::info;
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-    let client = Client::new(&config);
+    let config_path = PathBuf::from("config.yaml");
+    let config = Config::from_yaml_file(&config_path).expect("Failed to load configuration");
+    let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
+    let client = Client::new(&aws_config);
 
     let app = Router::new()
         .route("/healthz", get(health))
@@ -79,6 +81,13 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
+    if !config.api_keys.contains(headers.get("x-api-key").and_then(|v| v.to_str().ok()).unwrap_or_default()) {
+        return Response::builder()
+            .status(StatusCode::UNAUTHORIZED)
+            .body(Body::empty())
+            .unwrap();
+    }
+
     let lambda_request_body = json!({
         "httpMethod": http_method,
         "headers": to_string_map(&headers),
@@ -94,14 +103,23 @@ async fn handler(
     })
     .to_string();
 
-    let mut resp = client
-        .invoke_with_response_stream()
-        .function_name(env::var("LAMBDA_FUNCTION_NAME").unwrap())
-        .invocation_type(ResponseStreamingInvocationType::RequestResponse)
-        .payload(Blob::new(lambda_request_body))
-        .send()
-        .await
-        .unwrap();
+    let mut resp = match config.lambda_invoke_mode {
+        LambdaInvokeMode::Buffered => client
+            .invoke()
+            .function_name(&config.lambda_function_name)
+            .payload(Blob::new(lambda_request_body))
+            .send()
+            .await
+            .unwrap(),
+        LambdaInvokeMode::ResponseStreaming => client
+            .invoke_with_response_stream()
+            .function_name(&config.lambda_function_name)
+            .invocation_type(ResponseStreamingInvocationType::RequestResponse)
+            .payload(Blob::new(lambda_request_body))
+            .send()
+            .await
+            .unwrap(),
+    };
 
     let mut metadata_prelude_buffer = Vec::new();
     let mut remain_buffer = Vec::new();
