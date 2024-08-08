@@ -56,10 +56,18 @@ async fn main() {
         .layer(
             TraceLayer::new_for_http()
                 .on_request(|request: &Request<Body>, _span: &Span| {
-                    tracing::info!("Request: {} {}", request.method(), request.uri());
+                    // No logging on request
                 })
-                .on_response(|response: &Response, _latency: Duration, _span: &Span| {
-                    tracing::info!("Response: {} {}", response.status(), _latency.as_millis());
+                .on_response(|response: &Response, latency: Duration, _span: &Span| {
+                    tracing::info!(
+                        "{} {} {} {} {} {}",
+                        response.headers().get("X-Forwarded-For").unwrap_or(&HeaderValue::from_static("-")),
+                        "-",
+                        "-",
+                        response.status().as_u16(),
+                        latency.as_millis(),
+                        response.headers().get("Content-Length").unwrap_or(&HeaderValue::from_static("-"))
+                    );
                 })
         )
         .with_state(app_state);
