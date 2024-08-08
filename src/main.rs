@@ -1,5 +1,7 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
+use tracing::Span;
+use std::time::Duration;
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
 use aws_sdk_lambda::types::{InvokeResponseStreamUpdate, ResponseStreamingInvocationType};
