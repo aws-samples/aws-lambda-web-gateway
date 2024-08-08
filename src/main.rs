@@ -80,7 +80,7 @@ async fn handler(
 
     let content_type = headers
         .get("content-type")
-        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.to_str().ok().map(Some).flatten())
         .unwrap_or_default();
 
     let is_base64_encoded = match content_type {
@@ -99,7 +99,7 @@ async fn handler(
 
     let api_key = headers
         .get("x-api-key")
-        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(|s| HeaderValue::from_str(s).ok()).flatten())).as_ref())
+        .or_else(|| headers.get("authorization").and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ").or_else(|| Some(s)).map(Some).flatten())))
         .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
 
