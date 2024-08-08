@@ -51,7 +51,15 @@ async fn main() {
         .route("/healthz", get(health))
         .route("/", any(handler))
         .route("/*path", any(handler))
-        .layer(TraceLayer::new_for_http())
+        .layer(
+            TraceLayer::new_for_http()
+                .on_request(|request: &Request<Body>, _span: &Span| {
+                    tracing::info!("Request: {} {}", request.method(), request.uri());
+                })
+                .on_response(|response: &Response, _latency: Duration, _span: &Span| {
+                    tracing::info!("Response: {} {}", response.status(), _latency.as_millis());
+                })
+        )
         .with_state(app_state);
 
     let addr = "0.0.0.0:8000";
