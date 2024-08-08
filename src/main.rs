@@ -1,6 +1,5 @@
 mod config;
 use crate::config::{Config, LambdaInvokeMode};
-use crate::config::{Config, LambdaInvokeMode};
 
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
@@ -59,7 +58,7 @@ async fn handler(
     method: Method,
     headers: HeaderMap,
     body: Bytes,
-) -> impl IntoResponse {
+) -> Response {
     let path = "/".to_string() + path.map(|p| p.0).unwrap_or_default().as_str();
 
     let http_method = method.to_string();
@@ -131,7 +130,7 @@ async fn handler(
 
     let mut metadata_prelude_buffer = Vec::new();
     let mut remain_buffer = Vec::new();
-    'outer: while let Some(event) = resp.event_stream.recv().await.unwrap() {
+    'outer: while let Some(event) = resp.event_stream().unwrap().recv().await.unwrap() {
         match event {
             PayloadChunk(chunk) => match chunk.payload() {
                 None => {}
@@ -174,7 +173,7 @@ async fn handler(
                 let _ = tx.send(PayloadChunk(stream_update)).await;
             }
 
-            while let Some(event) = resp.event_stream.recv().await.unwrap() {
+            while let Some(event) = resp.event_stream().unwrap().recv().await.unwrap() {
                 let _ = tx.send(event).await;
             }
         }
@@ -288,19 +287,18 @@ async fn handle_streaming_response(resp: &mut aws_sdk_lambda::operation::invoke_
 
     let (tx, rx) = mpsc::channel(1);
 
-    tokio::spawn({
-        async move {
-            if remain_buffer.len() != 0 {
-                let stream_update = InvokeResponseStreamUpdate::builder()
-                    .payload(Blob::new(remain_buffer))
-                    .build();
+    let resp_clone = resp.clone();
+    tokio::spawn(async move {
+        if remain_buffer.len() != 0 {
+            let stream_update = InvokeResponseStreamUpdate::builder()
+                .payload(Blob::new(remain_buffer))
+                .build();
 
-                let _ = tx.send(PayloadChunk(stream_update)).await;
-            }
+            let _ = tx.send(PayloadChunk(stream_update)).await;
+        }
 
-            while let Some(event) = resp.event_stream.recv().await.unwrap() {
-                let _ = tx.send(event).await;
-            }
+        while let Some(event) = resp_clone.event_stream().unwrap().recv().await.unwrap() {
+            let _ = tx.send(event).await;
         }
     });
 
