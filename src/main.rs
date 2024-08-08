@@ -10,7 +10,7 @@ use aws_smithy_types::Blob;
 use axum::body::Body;
 use axum::{
     body::Bytes,
-    extract::{Path, Query, State, Request},
+    extract::{Path, Query, State},
     http::{HeaderMap, Method, StatusCode},
     response::{IntoResponse, Response},
     routing::any,
