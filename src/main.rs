@@ -55,17 +55,6 @@ async fn main() {
         .route("/*path", any(handler))
         .layer(
             TraceLayer::new_for_http()
-                .on_response(|response: &Response, latency: Duration, _span: &Span| {
-                    tracing::info!(
-                        "{} {} {} {} {} {}",
-                        response.headers().get("X-Forwarded-For").and_then(|v| v.to_str().ok()).unwrap_or("-"),
-                        "-",
-                        "-",
-                        response.status().as_u16(),
-                        latency.as_millis(),
-                        response.headers().get("Content-Length").and_then(|v| v.to_str().ok()).unwrap_or("-")
-                    );
-                })
         )
         .with_state(app_state);
 
