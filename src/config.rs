@@ -49,12 +49,6 @@ impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_content = fs::read_to_string(path)?;
         let mut config: Config = serde_yaml::from_str(&config_content)?;
-        config.lambda_invoke_mode = config.lambda_invoke_mode.map(|invoke_mode| {
-            LambdaInvokeMode::from_str(&invoke_mode.to_string().to_lowercase())
-        });
-        config.auth_mode = config.auth_mode.map(|auth_mode| {
-            AuthMode::from_str(&auth_mode.to_string().to_lowercase())
-        });
         Ok(config)
     }
 
