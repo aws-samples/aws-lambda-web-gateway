@@ -19,16 +19,42 @@ pub enum AuthMode {
     ApiKey,
 }
 
+impl AuthMode {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "open" => AuthMode::Open,
+            "apikey" => AuthMode::ApiKey,
+            _ => panic!("Invalid auth mode: {}", s),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum LambdaInvokeMode {
     Buffered,
     ResponseStream,
 }
 
+impl LambdaInvokeMode {
+    pub fn from_str(s: &str) -> Self {
+        match s {
+            "buffered" => LambdaInvokeMode::Buffered,
+            "responsestream" => LambdaInvokeMode::ResponseStream,
+            _ => panic!("Invalid invoke mode: {}", s),
+        }
+    }
+}
+
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_content = fs::read_to_string(path)?;
-        let config: Config = serde_yaml::from_str(&config_content)?;
+        let mut config: Config = serde_yaml::from_str(&config_content)?;
+        if let Some(invoke_mode) = &config.lambda_invoke_mode {
+            config.lambda_invoke_mode = LambdaInvokeMode::from_str(&invoke_mode.to_string().to_lowercase());
+        }
+        if let Some(auth_mode) = &config.auth_mode {
+            config.auth_mode = AuthMode::from_str(&auth_mode.to_string().to_lowercase());
+        }
         Ok(config)
     }
 
