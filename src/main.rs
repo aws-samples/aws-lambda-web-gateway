@@ -196,9 +196,19 @@ struct MetadataPrelude {
     pub cookies: Vec<String>,
 }
 
-async fn handle_buffered_response(_resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
-    // Handle buffered response
-    Response::builder().status(StatusCode::OK).body(Body::empty()).unwrap()
+async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
+    // Parse the InvokeOutput payload to extract the LambdaResponse
+    let payload = resp.payload().unwrap().to_vec();
+    let lambda_response: LambdaResponse = serde_json::from_slice(&payload).unwrap();
+
+    // Build the response using the extracted information
+    let mut resp_builder = Response::builder().status(StatusCode::from_u16(lambda_response.status_code).unwrap());
+
+    for (key, value) in lambda_response.headers {
+        resp_builder = resp_builder.header(key, value);
+    }
+
+    resp_builder.body(Body::from(lambda_response.body)).unwrap()
 }
 
 async fn handle_streaming_response(
