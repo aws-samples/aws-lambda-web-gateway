@@ -1,6 +1,5 @@
 use clap::{value_parser, Arg, Command};
 use serde::{Deserialize, Serialize};
-use clap::{value_parser, Arg, Command};
 use serde_yaml;
 use std::collections::HashSet;
 use std::fs;
