@@ -208,7 +208,12 @@ async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::Invok
         resp_builder = resp_builder.header(key, value);
     }
 
-    resp_builder.body(Body::from(lambda_response.body)).unwrap()
+    let body = if lambda_response.is_base64_encoded.unwrap_or(false) {
+        base64::engine::general_purpose::STANDARD.decode(lambda_response.body).unwrap()
+    } else {
+        lambda_response.body.into_bytes()
+    };
+    resp_builder.body(Body::from(body)).unwrap()
 }
 
 async fn handle_streaming_response(
