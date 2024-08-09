@@ -205,8 +205,10 @@ async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::Invok
     // Build the response using the extracted information
     let mut resp_builder = Response::builder().status(StatusCode::from_u16(lambda_response.status_code).unwrap());
 
-    for (key, value) in lambda_response.headers {
-        resp_builder = resp_builder.header(key, value);
+    if let Some(headers) = lambda_response.headers {
+        for (key, value) in headers {
+            resp_builder = resp_builder.header(key, value);
+        }
     }
 
     let body = if lambda_response.is_base64_encoded.unwrap_or(false) {
