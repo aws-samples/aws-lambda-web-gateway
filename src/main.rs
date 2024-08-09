@@ -179,7 +179,7 @@ struct LambdaResponse {
     status_code: u16,
     status_description: Option<String>,
     is_base64_encoded: Option<bool>,
-    headers: HashMap<String, String>,
+    headers: Option<HashMap<String, String>>,
     body: String,
 }
 
