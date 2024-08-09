@@ -108,7 +108,6 @@ async fn handler(
                     .and_then(|s| s.strip_prefix("Bearer ").map(Some).flatten())
             })
         })
-        .and_then(|v| v.to_str().ok())
         .unwrap_or_default();
 
     if !config.api_keys.contains(api_key) {
