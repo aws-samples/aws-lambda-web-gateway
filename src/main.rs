@@ -101,6 +101,7 @@ async fn handler(
 
     let api_key = headers
         .get("x-api-key")
+        .and_then(|v| v.to_str().ok())
         .or_else(|| {
             headers.get("authorization").and_then(|v| {
                 v.to_str()
@@ -108,10 +109,9 @@ async fn handler(
                     .and_then(|s| s.strip_prefix("Bearer ").map(Some).flatten())
             })
         })
-        .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    if !config.api_keys.contains(api_key) {
+    if !config.api_keys.contains(&api_key) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
