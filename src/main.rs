@@ -109,7 +109,7 @@ async fn handler(
                     .and_then(|s| s.strip_prefix("Bearer ").map(Some).flatten())
             })
         })
-        .unwrap_or("");
+        .unwrap_or_default();
 
     if !config.api_keys.contains(&api_key.to_string()) {
         return Response::builder()
