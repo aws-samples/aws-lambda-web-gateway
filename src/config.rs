@@ -48,7 +48,7 @@ impl LambdaInvokeMode {
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_content = fs::read_to_string(path)?;
-        let mut config: Config = serde_yaml::from_str(&config_content)?;
+        let config: Config = serde_yaml::from_str(&config_content)?;
         Ok(config)
     }
 
