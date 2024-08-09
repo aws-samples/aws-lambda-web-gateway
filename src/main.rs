@@ -106,7 +106,7 @@ async fn handler(
             headers.get("authorization").and_then(|v| {
                 v.to_str()
                     .ok()
-                    .and_then(|s| s.strip_prefix("Bearer ").map(Some).flatten())
+                    .and_then(|s| s.strip_prefix("Bearer "))
             })
         })
         .unwrap_or_default();
