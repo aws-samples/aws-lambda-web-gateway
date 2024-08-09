@@ -108,9 +108,10 @@ async fn handler(
                     .and_then(|s| s.strip_prefix("Bearer ").map(Some).flatten())
             })
         })
-        .unwrap_or_default();
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("");
 
-    if !config.api_keys.contains(api_key) {
+    if !config.api_keys.contains(api_key.as_str()) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
