@@ -21,7 +21,7 @@ pub enum AuthMode {
 
 impl AuthMode {
     pub fn from_str(s: &str) -> Self {
-        match s {
+        match s.to_lowercase().as_str() {
             "open" => AuthMode::Open,
             "apikey" => AuthMode::ApiKey,
             _ => panic!("Invalid auth mode: {}", s),
@@ -37,7 +37,7 @@ pub enum LambdaInvokeMode {
 
 impl LambdaInvokeMode {
     pub fn from_str(s: &str) -> Self {
-        match s {
+        match s.to_lowercase().as_str() {
             "buffered" => LambdaInvokeMode::Buffered,
             "responsestream" => LambdaInvokeMode::ResponseStream,
             _ => panic!("Invalid invoke mode: {}", s),
