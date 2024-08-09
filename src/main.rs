@@ -51,9 +51,7 @@ async fn main() {
         .route("/healthz", get(health))
         .route("/", any(handler))
         .route("/*path", any(handler))
-        .layer(
-            TraceLayer::new_for_http()
-        )
+        .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 
     let addr = "0.0.0.0:8000";
@@ -103,11 +101,9 @@ async fn handler(
         .get("x-api-key")
         .and_then(|v| v.to_str().ok())
         .or_else(|| {
-            headers.get("authorization").and_then(|v| {
-                v.to_str()
-                    .ok()
-                    .and_then(|s| s.strip_prefix("Bearer "))
-            })
+            headers
+                .get("authorization")
+                .and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ")))
         })
         .unwrap_or_default();
 
