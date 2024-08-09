@@ -97,19 +97,19 @@ async fn handler(
         String::from_utf8_lossy(&body).to_string()
     };
 
-    let api_key = headers
-        .get("x-api-key")
-        .and_then(|v| v.to_str().ok())
-        .or_else(|| {
-            headers
-                .get("authorization")
-                .and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ")))
-        })
-        .unwrap_or_default();
-
     match config.auth_mode {
         config::AuthMode::Open => {}
         config::AuthMode::ApiKey => {
+            let api_key = headers
+                .get("x-api-key")
+                .and_then(|v| v.to_str().ok())
+                .or_else(|| {
+                    headers
+                        .get("authorization")
+                        .and_then(|v| v.to_str().ok().and_then(|s| s.strip_prefix("Bearer ")))
+                })
+                .unwrap_or_default();
+
             if !config.api_keys.contains(api_key) {
                 return Response::builder()
                     .status(StatusCode::UNAUTHORIZED)
