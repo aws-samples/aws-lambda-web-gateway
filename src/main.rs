@@ -111,7 +111,7 @@ async fn handler(
         })
         .unwrap_or("");
 
-    if !config.api_keys.contains(&api_key) {
+    if !config.api_keys.contains(&api_key.to_string()) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
