@@ -111,7 +111,7 @@ async fn handler(
         .and_then(|v| v.to_str().ok())
         .unwrap_or("");
 
-    if !config.api_keys.contains(api_key.as_str()) {
+    if !config.api_keys.contains(api_key) {
         return Response::builder()
             .status(StatusCode::UNAUTHORIZED)
             .body(Body::empty())
