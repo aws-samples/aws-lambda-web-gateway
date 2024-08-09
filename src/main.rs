@@ -107,11 +107,16 @@ async fn handler(
         })
         .unwrap_or_default();
 
-    if !config.api_keys.contains(api_key) {
-        return Response::builder()
-            .status(StatusCode::UNAUTHORIZED)
-            .body(Body::empty())
-            .unwrap();
+    match config.auth_mode {
+        config::AuthMode::Open => {}
+        config::AuthMode::ApiKey => {
+            if !config.api_keys.contains(api_key) {
+                return Response::builder()
+                    .status(StatusCode::UNAUTHORIZED)
+                    .body(Body::empty())
+                    .unwrap();
+            }
+        }
     }
 
     let lambda_request_body = json!({
