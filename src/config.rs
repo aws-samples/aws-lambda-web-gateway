@@ -10,7 +10,6 @@ pub struct Config {
     pub lambda_function_name: String,
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
-    pub auth_mode: AuthMode,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
