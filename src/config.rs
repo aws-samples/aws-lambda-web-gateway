@@ -1,5 +1,6 @@
 use clap::{value_parser, Arg, Command};
 use serde::{Deserialize, Serialize};
+use clap::{value_parser, Arg, Command};
 use serde_yaml;
 use std::collections::HashSet;
 use std::fs;
@@ -10,6 +11,7 @@ pub struct Config {
     pub lambda_function_name: String,
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
+    pub auth_mode: AuthMode,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -57,6 +59,15 @@ impl Config {
                     .required(false)
                     .value_parser(value_parser!(String)),
             )
+            .arg(
+                Arg::new("auth-mode")
+                    .short('a')
+                    .long("auth-mode")
+                    .value_name("AUTH_MODE")
+                    .help("Sets the authentication mode")
+                    .required(false)
+                    .value_parser(["Open", "ApiKey"]),
+            )
             .get_matches();
 
         let lambda_function_name = matches
@@ -78,10 +89,21 @@ impl Config {
             .map(|s| s.clone())
             .collect();
 
+        let auth_mode = match matches
+            .get_one::<String>("auth-mode")
+            .ok_or("Missing auth-mode")?
+            .as_str()
+        {
+            "Open" => AuthMode::Open,
+            "ApiKey" => AuthMode::ApiKey,
+            _ => return Err("Invalid auth mode".into()),
+        };
+
         Ok(Config {
             lambda_function_name,
             lambda_invoke_mode,
             api_keys,
+            auth_mode,
         })
     }
 }
