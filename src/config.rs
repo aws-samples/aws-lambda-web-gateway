@@ -53,7 +53,13 @@ impl Config {
                     .value_name("INVOKE_MODE")
                     .help("Sets the Lambda invoke mode")
                     .required(false)
-                    .value_parser(["Buffered", "ResponseStream"]),
+                    .value_parser(|s: &str| {
+                        match s.to_lowercase().as_str() {
+                            "buffered" => Ok(LambdaInvokeMode::Buffered),
+                            "responsestream" => Ok(LambdaInvokeMode::ResponseStream),
+                            _ => Err(format!("Invalid invoke mode: {}", s)),
+                        }
+                    }),
             )
             .arg(
                 Arg::new("api-keys")
@@ -71,7 +77,13 @@ impl Config {
                     .value_name("AUTH_MODE")
                     .help("Sets the authentication mode")
                     .required(false)
-                    .value_parser(["Open", "ApiKey"]),
+                    .value_parser(|s: &str| {
+                        match s.to_lowercase().as_str() {
+                            "open" => Ok(AuthMode::Open),
+                            "apikey" => Ok(AuthMode::ApiKey),
+                            _ => Err(format!("Invalid auth mode: {}", s)),
+                        }
+                    }),
             )
             .get_matches();
 
