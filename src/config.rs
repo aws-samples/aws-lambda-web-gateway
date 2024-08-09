@@ -59,8 +59,15 @@ impl Config {
             )
             .get_matches();
 
-        let lambda_function_name = matches.get_one::<String>("lambda-function-name").ok_or("Missing lambda-function-name")?.clone();
-        let lambda_invoke_mode = match matches.get_one::<String>("lambda-invoke-mode").ok_or("Missing lambda-invoke-mode")?.as_str() {
+        let lambda_function_name = matches
+            .get_one::<String>("lambda-function-name")
+            .ok_or("Missing lambda-function-name")?
+            .clone();
+        let lambda_invoke_mode = match matches
+            .get_one::<String>("lambda-invoke-mode")
+            .ok_or("Missing lambda-invoke-mode")?
+            .as_str()
+        {
             "Buffered" => LambdaInvokeMode::Buffered,
             "ResponseStream" => LambdaInvokeMode::ResponseStream,
             _ => return Err("Invalid invoke mode".into()),
