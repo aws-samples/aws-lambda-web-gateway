@@ -41,8 +41,8 @@ auth_mode: "ApiKey"
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/lambda-gateway.git
-   cd lambda-gateway
+   git clone https://github.com/yourusername/lambda-web-gateway.git
+   cd lambda-web-gateway
    ```
 
 2. Build the project:
@@ -52,12 +52,12 @@ auth_mode: "ApiKey"
 
 3. Run the gateway:
    ```
-   ./target/release/lambda-gateway
+   ./target/release/lambda-web-gateway
    ```
 
    Or with command-line arguments:
    ```
-   ./target/release/lambda-gateway --lambda-function-name my-function --lambda-invoke-mode Buffered --auth-mode ApiKey --api-keys key1,key2
+   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode Buffered --auth-mode ApiKey --api-keys key1,key2
    ```
 
 ## Usage
