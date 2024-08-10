@@ -217,37 +217,42 @@ async fn handle_streaming_response(
 ) -> Response {
     let (tx, rx) = mpsc::channel(1);
     let mut metadata_buffer = Vec::new();
-    let mut in_metadata = false;
     let mut null_count = 0;
     let mut metadata_prelude: Option<MetadataPrelude> = None;
     let mut remaining_data = Vec::new();
 
     // Process metadata
-    if let Some(event) = resp.event_stream.recv().await.unwrap() {
+    while let Some(event) = resp.event_stream.recv().await.unwrap() {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
-                if !bytes.is_empty() && bytes[0] == b'{' {
-                    // Process metadata
-                    for (i, &byte) in bytes.iter().enumerate() {
-                        metadata_buffer.push(byte);
-                        if byte == 0 {
-                            null_count += 1;
-                            if null_count == 8 {
-                                let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
-                                metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
-                                tracing::debug!(metadata_prelude=?metadata_prelude);
-                                // Save remaining data after metadata
-                                remaining_data = bytes[i+1..].to_vec();
-                                break;
+                if metadata_prelude.is_none() {
+                    if !bytes.is_empty() && bytes[0] == b'{' {
+                        // Process metadata
+                        for (i, &byte) in bytes.iter().enumerate() {
+                            metadata_buffer.push(byte);
+                            if byte == 0 {
+                                null_count += 1;
+                                if null_count == 8 {
+                                    let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
+                                    metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
+                                    tracing::debug!(metadata_prelude=?metadata_prelude);
+                                    // Save remaining data after metadata
+                                    remaining_data = bytes[i+1..].to_vec();
+                                    break;
+                                }
+                            } else {
+                                null_count = 0;
                             }
-                        } else {
-                            null_count = 0;
                         }
+                        if metadata_prelude.is_some() {
+                            break;
+                        }
+                    } else {
+                        // No metadata prelude, treat all data as payload
+                        remaining_data = bytes;
+                        break;
                     }
-                } else {
-                    // No metadata prelude, treat all data as payload
-                    remaining_data = bytes;
                 }
             }
         }
