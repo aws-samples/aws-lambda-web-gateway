@@ -222,7 +222,7 @@ async fn handle_streaming_response(
     let mut null_count = 0;
 
     tokio::spawn(async move {
-        while let Some(event) = resp.event_stream().recv().await.unwrap() {
+        while let Some(event) = resp.event_stream.recv().await.unwrap() {
             match event {
                 PayloadChunk(chunk) => {
                     if let Some(data) = chunk.payload() {
