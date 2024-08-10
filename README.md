@@ -57,7 +57,7 @@ api_keys:
 
    Or with command-line arguments:
    ```
-   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode Buffered --auth-mode ApiKey --api-keys key1,key2
+   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode ResponseStream --auth-mode ApiKey --api-keys key1,key2
    ```
 
 ## Usage
