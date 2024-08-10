@@ -215,52 +215,67 @@ async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::Invok
 async fn handle_streaming_response(
     mut resp: aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
 ) -> Response {
-    // Handle streaming response
-    let mut metadata_prelude_buffer = Vec::new();
-    let mut remain_buffer = Vec::new();
-    'outer: while let Some(event) = resp.event_stream().recv().await.unwrap() {
-        match event {
-            PayloadChunk(chunk) => match chunk.payload() {
-                None => {}
-                Some(data) => {
-                    let mut null_count = 0;
-                    let bytes = data.clone().into_inner();
-                    let bytes_len = bytes.len();
-                    for i in 0..bytes_len {
-                        if bytes[i] != 0 {
-                            metadata_prelude_buffer.push(bytes[i]);
-                        } else {
-                            null_count += 1;
-                            if null_count == 8 {
-                                if i != bytes_len {
-                                    remain_buffer = bytes[i + 1..bytes_len].to_vec()
+    let (tx, rx) = mpsc::channel(1);
+    let mut metadata_prelude: Option<MetadataPrelude> = None;
+    let mut metadata_buffer = Vec::new();
+    let mut in_metadata = false;
+    let mut null_count = 0;
+
+    tokio::spawn(async move {
+        while let Some(event) = resp.event_stream().recv().await.unwrap() {
+            match event {
+                PayloadChunk(chunk) => {
+                    if let Some(data) = chunk.payload() {
+                        let bytes = data.clone().into_inner();
+                        if metadata_prelude.is_none() {
+                            for &byte in &bytes {
+                                if !in_metadata && byte == b'{' {
+                                    in_metadata = true;
                                 }
-                                break 'outer;
+                                if in_metadata {
+                                    metadata_buffer.push(byte);
+                                    if byte == 0 {
+                                        null_count += 1;
+                                        if null_count == 8 {
+                                            let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
+                                            metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
+                                            tracing::debug!(metadata_prelude=?metadata_prelude);
+                                            // Send the remaining data after metadata
+                                            if metadata_buffer.len() < bytes.len() {
+                                                let remaining = bytes[metadata_buffer.len()..].to_vec();
+                                                let stream_update = InvokeResponseStreamUpdate::builder()
+                                                    .payload(Blob::new(remaining))
+                                                    .build();
+                                                let _ = tx.send(PayloadChunk(stream_update)).await;
+                                            }
+                                            break;
+                                        }
+                                    } else {
+                                        null_count = 0;
+                                    }
+                                }
                             }
+                            if metadata_prelude.is_none() {
+                                // If no metadata found, treat as regular payload
+                                let stream_update = InvokeResponseStreamUpdate::builder()
+                                    .payload(data.clone())
+                                    .build();
+                                let _ = tx.send(PayloadChunk(stream_update)).await;
+                            }
+                        } else {
+                            // After metadata is found, send all subsequent chunks
+                            let stream_update = InvokeResponseStreamUpdate::builder()
+                                .payload(data.clone())
+                                .build();
+                            let _ = tx.send(PayloadChunk(stream_update)).await;
                         }
                     }
                 }
-            },
-            _ => {}
-        }
-    }
-    let metadata_prelude_string = String::from_utf8(metadata_prelude_buffer).unwrap();
-    let metadata_prelude: MetadataPrelude = serde_json::from_str(metadata_prelude_string.as_str()).unwrap_or_default();
-    tracing::debug!(metadata_prelude=?metadata_prelude);
-
-    let (tx, rx) = mpsc::channel(1);
-
-    tokio::spawn(async move {
-        if remain_buffer.len() != 0 {
-            let stream_update = InvokeResponseStreamUpdate::builder()
-                .payload(Blob::new(remain_buffer))
-                .build();
-
-            let _ = tx.send(PayloadChunk(stream_update)).await;
-        }
-
-        while let Some(event) = resp.event_stream.recv().await.unwrap() {
-            let _ = tx.send(event).await;
+                InvokeComplete(_) => {
+                    let _ = tx.send(event).await;
+                }
+                _ => {}
+            }
         }
     });
 
@@ -277,18 +292,18 @@ async fn handle_streaming_response(
         _ => Err("unknown events"),
     });
 
-    let resp_builder = Response::builder().status(metadata_prelude.status_code);
+    let resp_builder = Response::builder().status(metadata_prelude.as_ref().map_or(StatusCode::OK, |m| m.status_code));
 
-    let resp_builder = metadata_prelude
-        .headers
-        .iter()
-        .filter(|(k, _)| *k != "content-length")
-        .fold(resp_builder, |builder, (k, v)| builder.header(k, v));
+    let resp_builder = metadata_prelude.as_ref().map_or(resp_builder, |m| {
+        m.headers.iter()
+            .filter(|(k, _)| *k != "content-length")
+            .fold(resp_builder, |builder, (k, v)| builder.header(k, v))
+    });
 
-    let resp_builder = metadata_prelude
-        .cookies
-        .iter()
-        .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie));
+    let resp_builder = metadata_prelude.as_ref().map_or(resp_builder, |m| {
+        m.cookies.iter()
+            .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie))
+    });
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
 }
