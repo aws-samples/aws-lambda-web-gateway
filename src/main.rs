@@ -292,18 +292,18 @@ async fn handle_streaming_response(
         _ => Err("unknown events"),
     });
 
-    let resp_builder = Response::builder().status(metadata_prelude.as_ref().map_or(StatusCode::OK, |m| m.status_code));
+    let metadata_prelude = metadata_prelude.unwrap_or_default();
+    let mut resp_builder = Response::builder().status(metadata_prelude.status_code);
 
-    let resp_builder = metadata_prelude.as_ref().map_or(resp_builder, |m| {
-        m.headers.iter()
-            .filter(|(k, _)| *k != "content-length")
-            .fold(resp_builder, |builder, (k, v)| builder.header(k, v))
-    });
+    for (k, v) in metadata_prelude.headers.iter() {
+        if k != "content-length" {
+            resp_builder = resp_builder.header(k, v);
+        }
+    }
 
-    let resp_builder = metadata_prelude.as_ref().map_or(resp_builder, |m| {
-        m.cookies.iter()
-            .fold(resp_builder, |builder, cookie| builder.header("set-cookie", cookie))
-    });
+    for cookie in &metadata_prelude.cookies {
+        resp_builder = resp_builder.header("set-cookie", cookie);
+    }
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
 }
