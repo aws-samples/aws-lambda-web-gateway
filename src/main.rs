@@ -223,38 +223,33 @@ async fn handle_streaming_response(
     let mut remaining_data = Vec::new();
 
     // Process metadata
-    while let Some(event) = resp.event_stream.recv().await.unwrap() {
-        match event {
-            PayloadChunk(chunk) => {
-                if let Some(data) = chunk.payload() {
-                    let bytes = data.clone().into_inner();
+    if let Some(event) = resp.event_stream.recv().await.unwrap() {
+        if let PayloadChunk(chunk) = event {
+            if let Some(data) = chunk.payload() {
+                let bytes = data.clone().into_inner();
+                if !bytes.is_empty() && bytes[0] == b'{' {
+                    // Process metadata
                     for (i, &byte) in bytes.iter().enumerate() {
-                        if !in_metadata && byte == b'{' {
-                            in_metadata = true;
-                        }
-                        if in_metadata {
-                            metadata_buffer.push(byte);
-                            if byte == 0 {
-                                null_count += 1;
-                                if null_count == 8 {
-                                    let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
-                                    metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
-                                    tracing::debug!(metadata_prelude=?metadata_prelude);
-                                    // Save remaining data after metadata
-                                    remaining_data = bytes[i+1..].to_vec();
-                                    break;
-                                }
-                            } else {
-                                null_count = 0;
+                        metadata_buffer.push(byte);
+                        if byte == 0 {
+                            null_count += 1;
+                            if null_count == 8 {
+                                let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
+                                metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
+                                tracing::debug!(metadata_prelude=?metadata_prelude);
+                                // Save remaining data after metadata
+                                remaining_data = bytes[i+1..].to_vec();
+                                break;
                             }
+                        } else {
+                            null_count = 0;
                         }
                     }
-                    if metadata_prelude.is_some() {
-                        break;
-                    }
+                } else {
+                    // No metadata prelude, treat all data as payload
+                    remaining_data = bytes;
                 }
             }
-            _ => {}
         }
     }
 
@@ -299,17 +294,24 @@ async fn handle_streaming_response(
         _ => Err("unknown events"),
     });
 
-    let metadata_prelude = metadata_prelude.unwrap_or_default();
-    let mut resp_builder = Response::builder().status(metadata_prelude.status_code);
+    let mut resp_builder = Response::builder();
 
-    for (k, v) in metadata_prelude.headers.iter() {
-        if k != "content-length" {
-            resp_builder = resp_builder.header(k, v);
+    if let Some(metadata_prelude) = metadata_prelude {
+        resp_builder = resp_builder.status(metadata_prelude.status_code);
+
+        for (k, v) in metadata_prelude.headers.iter() {
+            if k != "content-length" {
+                resp_builder = resp_builder.header(k, v);
+            }
         }
-    }
 
-    for cookie in &metadata_prelude.cookies {
-        resp_builder = resp_builder.header("set-cookie", cookie);
+        for cookie in &metadata_prelude.cookies {
+            resp_builder = resp_builder.header("set-cookie", cookie);
+        }
+    } else {
+        // Default response if no metadata
+        resp_builder = resp_builder.status(StatusCode::OK);
+        resp_builder = resp_builder.header("content-type", "application/octet-stream");
     }
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
