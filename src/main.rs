@@ -27,7 +27,7 @@ use tower_http::trace::TraceLayer;
 
 #[derive(Clone)]
 struct ApplicationState {
-    client: aws_sdk_lambda::Client,
+    client: Client,
     config: Config,
 }
 
