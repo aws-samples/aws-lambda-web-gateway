@@ -2,11 +2,8 @@ build:
 	CC=x86_64-linux-musl-gcc cargo build --release --target=x86_64-unknown-linux-musl
 
 package: build
-	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/awsguru
-	docker build -t public.ecr.aws/awsguru/lambda-gateway .
+	aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 048972532408.dkr.ecr.us-west-2.amazonaws.com
+	docker build -t lambda-web-gateway:latest 048972532408.dkr.ecr.us-west-2.amazonaws.com/lambda-web-gateway:latest .
 
 publish: package
-	docker push public.ecr.aws/awsguru/lambda-gateway
-
-deploy: publish
-	kubectl apply -f k8s
+	docker push 048972532408.dkr.ecr.us-west-2.amazonaws.com/lambda-web-gateway:latest
