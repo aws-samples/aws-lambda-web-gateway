@@ -221,20 +221,17 @@ async fn handle_streaming_response(
     let mut metadata_prelude: Option<MetadataPrelude> = None;
     let mut remaining_data = Vec::new();
 
-    // Step 1: Detect if metadata exists
-    let has_metadata = detect_metadata(&mut resp).await;
+    // Step 1: Detect if metadata exists and get the first chunk
+    let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
-    // Step 2: Collect metadata if it exists
-    if has_metadata {
-        (metadata_prelude, remaining_data) = collect_metadata(&mut resp, &mut metadata_buffer).await;
-    } else {
-        // No metadata prelude, treat first chunk as payload
-        if let Some(event) = resp.event_stream.recv().await.unwrap() {
-            if let PayloadChunk(chunk) = event {
-                if let Some(data) = chunk.payload() {
-                    remaining_data = data.clone().into_inner();
-                }
-            }
+    // Step 2: Process the first chunk
+    if let Some(chunk) = first_chunk {
+        if has_metadata {
+            metadata_buffer.extend_from_slice(&chunk);
+            (metadata_prelude, remaining_data) = collect_metadata(&mut resp, &mut metadata_buffer).await;
+        } else {
+            // No metadata prelude, treat first chunk as payload
+            remaining_data = chunk;
         }
     }
 
@@ -300,16 +297,17 @@ async fn handle_streaming_response(
 }
 async fn detect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
-) -> bool {
+) -> (bool, Option<Vec<u8>>) {
     if let Some(event) = resp.event_stream.recv().await.unwrap() {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
-                return !bytes.is_empty() && bytes[0] == b'{';
+                let has_metadata = !bytes.is_empty() && bytes[0] == b'{';
+                return (has_metadata, Some(bytes));
             }
         }
     }
-    false
+    (false, None)
 }
 
 async fn collect_metadata(
