@@ -30,11 +30,11 @@ Example `config.yaml`:
 
 ```yaml
 lambda_function_name: "my-lambda-function"
-lambda_invoke_mode: "Buffered"
+lambda_invoke_mode: "ResponseStream"
+auth_mode: "ApiKey"
 api_keys:
   - "key1"
   - "key2"
-auth_mode: "ApiKey"
 ```
 
 ## Building and Running
