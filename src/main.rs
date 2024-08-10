@@ -218,7 +218,7 @@ async fn handle_streaming_response(
     // Handle streaming response
     let mut metadata_prelude_buffer = Vec::new();
     let mut remain_buffer = Vec::new();
-    'outer: while let Some(event) = resp.event_stream.recv().await.unwrap() {
+    'outer: while let Some(event) = resp.event_stream().recv().await.unwrap() {
         match event {
             PayloadChunk(chunk) => match chunk.payload() {
                 None => {}
