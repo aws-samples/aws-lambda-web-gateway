@@ -1205,7 +1205,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "lambda-gateway"
+name = "lambda-web-gateway"
 version = "0.1.0"
 dependencies = [
  "aws-config",

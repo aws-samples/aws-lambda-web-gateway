@@ -1,5 +1,5 @@
 [package]
-name = "lambda-gateway"
+name = "lambda-web-gateway"
 version = "0.1.0"
 authors = ["Harold Sun <sunhua@amazon.com>"]
 edition = "2021"
@@ -30,5 +30,10 @@ futures-util = "0.3.30"
 http-serde = "2.1.0"
 
 [[bin]]
-name = "lambda-gateway"
+name = "lambda-web-gateway"
 path = "src/main.rs"
+
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
