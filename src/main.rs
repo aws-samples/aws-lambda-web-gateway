@@ -205,7 +205,9 @@ async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::Invok
     }
 
     let body = if lambda_response.is_base64_encoded.unwrap_or(false) {
-        base64::engine::general_purpose::STANDARD.decode(lambda_response.body).unwrap()
+        base64::engine::general_purpose::STANDARD
+            .decode(lambda_response.body)
+            .unwrap()
     } else {
         lambda_response.body.into_bytes()
     };
@@ -217,45 +219,41 @@ async fn handle_streaming_response(
 ) -> Response {
     let (tx, rx) = mpsc::channel(1);
     let mut metadata_buffer = Vec::new();
-    let mut null_count = 0;
     let mut metadata_prelude: Option<MetadataPrelude> = None;
     let mut remaining_data = Vec::new();
+    let mut in_metadata = false;
 
     // Process metadata
     while let Some(event) = resp.event_stream.recv().await.unwrap() {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
+                let mut null_count = 0;
                 let bytes = data.clone().into_inner();
-                if metadata_prelude.is_none() {
-                    if !bytes.is_empty() && bytes[0] == b'{' {
-                        // Process metadata
-                        for (i, &byte) in bytes.iter().enumerate() {
-                            if byte == 0 {
-                                null_count += 1;
-                                if null_count == 8 {
-                                    let metadata_str = String::from_utf8_lossy(&metadata_buffer);
-                                    metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
-                                    tracing::debug!(metadata_prelude=?metadata_prelude);
-                                    // Save remaining data after metadata
-                                    remaining_data = bytes[i+1..].to_vec();
-                                    break;
-                                }
-                            } else {
-                                if null_count > 0 {
-                                    metadata_buffer.extend(std::iter::repeat(0).take(null_count));
-                                    null_count = 0;
-                                }
-                                metadata_buffer.push(byte);
+                if in_metadata || (!bytes.is_empty() && bytes[0] == b'{') {
+                    in_metadata = true;
+                    // Process metadata
+                    for (i, &byte) in bytes.iter().enumerate() {
+                        if byte == 0 {
+                            null_count += 1;
+                            if null_count == 8 {
+                                let metadata_str = String::from_utf8_lossy(&metadata_buffer);
+                                metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
+                                tracing::debug!(metadata_prelude=?metadata_prelude);
+                                // Save remaining data after metadata
+                                remaining_data = bytes[i + 1..].to_vec();
+                                break;
                             }
+                        } else {
+                            metadata_buffer.push(byte);
                         }
-                        if metadata_prelude.is_some() {
-                            break;
-                        }
-                    } else {
-                        // No metadata prelude, treat all data as payload
-                        remaining_data = bytes;
+                    }
+                    if metadata_prelude.is_some() {
                         break;
                     }
+                } else {
+                    // No metadata prelude, treat all data as payload
+                    remaining_data = bytes;
+                    break;
                 }
             }
         }
@@ -275,9 +273,7 @@ async fn handle_streaming_response(
             match event {
                 PayloadChunk(chunk) => {
                     if let Some(data) = chunk.payload() {
-                        let stream_update = InvokeResponseStreamUpdate::builder()
-                            .payload(data.clone())
-                            .build();
+                        let stream_update = InvokeResponseStreamUpdate::builder().payload(data.clone()).build();
                         let _ = tx.send(PayloadChunk(stream_update)).await;
                     }
                 }
@@ -294,7 +290,6 @@ async fn handle_streaming_response(
         PayloadChunk(chunk) => match chunk.payload() {
             Some(data) => {
                 let bytes = data.clone().into_inner();
-                tracing::debug!(data = ?String::from_utf8_lossy(&*bytes));
                 Ok(Bytes::from(bytes))
             }
             None => Ok(Bytes::default()),
