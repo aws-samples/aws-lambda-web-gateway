@@ -317,28 +317,44 @@ async fn collect_metadata(
     let mut metadata_prelude = None;
     let mut remaining_data = Vec::new();
 
+    // Process the metadata_buffer first
+    let (prelude, remaining) = process_buffer(metadata_buffer);
+    if let Some(p) = prelude {
+        return (Some(p), remaining);
+    }
+
+    // If metadata is not complete, continue processing the stream
     while let Some(event) = resp.event_stream.recv().await.unwrap() {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
-                let mut null_count = 0;
                 let bytes = data.clone().into_inner();
-                for (i, &byte) in bytes.iter().enumerate() {
-                    if byte == 0 {
-                        null_count += 1;
-                        if null_count == 8 {
-                            let metadata_str = String::from_utf8_lossy(&metadata_buffer);
-                            metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
-                            tracing::debug!(metadata_prelude=?metadata_prelude);
-                            // Save remaining data after metadata
-                            remaining_data = bytes[i + 1..].to_vec();
-                            return (metadata_prelude, remaining_data);
-                        }
-                    } else {
-                        metadata_buffer.push(byte);
-                    }
+                metadata_buffer.extend_from_slice(&bytes);
+                let (prelude, remaining) = process_buffer(metadata_buffer);
+                if let Some(p) = prelude {
+                    return (Some(p), remaining);
                 }
             }
         }
     }
     (metadata_prelude, remaining_data)
+}
+
+fn process_buffer(buffer: &[u8]) -> (Option<MetadataPrelude>, Vec<u8>) {
+    let mut null_count = 0;
+    for (i, &byte) in buffer.iter().enumerate() {
+        if byte == 0 {
+            null_count += 1;
+            if null_count == 8 {
+                let metadata_str = String::from_utf8_lossy(&buffer[..i]);
+                let metadata_prelude = serde_json::from_str(&metadata_str).unwrap_or_default();
+                tracing::debug!(metadata_prelude=?metadata_prelude);
+                // Save remaining data after metadata
+                let remaining_data = buffer[i + 1..].to_vec();
+                return (Some(metadata_prelude), remaining_data);
+            }
+        } else {
+            null_count = 0;
+        }
+    }
+    (None, Vec::new())
 }
