@@ -230,11 +230,10 @@ async fn handle_streaming_response(
                     if !bytes.is_empty() && bytes[0] == b'{' {
                         // Process metadata
                         for (i, &byte) in bytes.iter().enumerate() {
-                            metadata_buffer.push(byte);
                             if byte == 0 {
                                 null_count += 1;
                                 if null_count == 8 {
-                                    let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
+                                    let metadata_str = String::from_utf8_lossy(&metadata_buffer);
                                     metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
                                     tracing::debug!(metadata_prelude=?metadata_prelude);
                                     // Save remaining data after metadata
@@ -242,7 +241,11 @@ async fn handle_streaming_response(
                                     break;
                                 }
                             } else {
-                                null_count = 0;
+                                if null_count > 0 {
+                                    metadata_buffer.extend(std::iter::repeat(0).take(null_count));
+                                    null_count = 0;
+                                }
+                                metadata_buffer.push(byte);
                             }
                         }
                         if metadata_prelude.is_some() {
