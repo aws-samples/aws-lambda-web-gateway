@@ -192,7 +192,6 @@ struct MetadataPrelude {
 async fn handle_buffered_response(resp: aws_sdk_lambda::operation::invoke::InvokeOutput) -> Response {
     // Parse the InvokeOutput payload to extract the LambdaResponse
     let payload = resp.payload().unwrap().as_ref().to_vec();
-    tracing::debug!(payload=?String::from_utf8(payload.clone()));
     let lambda_response: LambdaResponse = serde_json::from_slice(&payload).unwrap();
 
     // Build the response using the extracted information
