@@ -53,7 +53,7 @@ impl Config {
     }
 
     pub fn from_cli() -> Result<Self, Box<dyn std::error::Error>> {
-        let matches = Command::new("lambda-gateway")
+        let matches = Command::new("lambda-web-gateway")
             .version("0.1.0")
             .author("Harold Sun <sunhua@amazon.com>")
             .about("A gateway to AWS Lambda functions")
