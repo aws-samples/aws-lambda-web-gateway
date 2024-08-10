@@ -1,6 +1,6 @@
-# Lambda Gateway
+# Lambda Web Gateway
 
-A flexible and efficient gateway for AWS Lambda functions, written in Rust.
+A flexible and efficient web gateway for AWS Lambda functions, written in Rust.
 
 ## Features
 
