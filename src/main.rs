@@ -220,39 +220,19 @@ async fn handle_streaming_response(
     let mut metadata_buffer = Vec::new();
     let mut metadata_prelude: Option<MetadataPrelude> = None;
     let mut remaining_data = Vec::new();
-    let mut in_metadata = false;
 
-    // Process metadata
-    while let Some(event) = resp.event_stream.recv().await.unwrap() {
-        if let PayloadChunk(chunk) = event {
-            if let Some(data) = chunk.payload() {
-                let mut null_count = 0;
-                let bytes = data.clone().into_inner();
-                if in_metadata || (!bytes.is_empty() && bytes[0] == b'{') {
-                    in_metadata = true;
-                    // Process metadata
-                    for (i, &byte) in bytes.iter().enumerate() {
-                        if byte == 0 {
-                            null_count += 1;
-                            if null_count == 8 {
-                                let metadata_str = String::from_utf8_lossy(&metadata_buffer);
-                                metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
-                                tracing::debug!(metadata_prelude=?metadata_prelude);
-                                // Save remaining data after metadata
-                                remaining_data = bytes[i + 1..].to_vec();
-                                break;
-                            }
-                        } else {
-                            metadata_buffer.push(byte);
-                        }
-                    }
-                    if metadata_prelude.is_some() {
-                        break;
-                    }
-                } else {
-                    // No metadata prelude, treat all data as payload
-                    remaining_data = bytes;
-                    break;
+    // Step 1: Detect if metadata exists
+    let has_metadata = detect_metadata(&mut resp).await;
+
+    // Step 2: Collect metadata if it exists
+    if has_metadata {
+        (metadata_prelude, remaining_data) = collect_metadata(&mut resp, &mut metadata_buffer).await;
+    } else {
+        // No metadata prelude, treat first chunk as payload
+        if let Some(event) = resp.event_stream.recv().await.unwrap() {
+            if let PayloadChunk(chunk) = event {
+                if let Some(data) = chunk.payload() {
+                    remaining_data = data.clone().into_inner();
                 }
             }
         }
@@ -317,4 +297,50 @@ async fn handle_streaming_response(
     }
 
     resp_builder.body(Body::from_stream(stream)).unwrap()
+}
+async fn detect_metadata(
+    resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
+) -> bool {
+    if let Some(event) = resp.event_stream.recv().await.unwrap() {
+        if let PayloadChunk(chunk) = event {
+            if let Some(data) = chunk.payload() {
+                let bytes = data.clone().into_inner();
+                return !bytes.is_empty() && bytes[0] == b'{';
+            }
+        }
+    }
+    false
+}
+
+async fn collect_metadata(
+    resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
+    metadata_buffer: &mut Vec<u8>,
+) -> (Option<MetadataPrelude>, Vec<u8>) {
+    let mut metadata_prelude = None;
+    let mut remaining_data = Vec::new();
+
+    while let Some(event) = resp.event_stream.recv().await.unwrap() {
+        if let PayloadChunk(chunk) = event {
+            if let Some(data) = chunk.payload() {
+                let mut null_count = 0;
+                let bytes = data.clone().into_inner();
+                for (i, &byte) in bytes.iter().enumerate() {
+                    if byte == 0 {
+                        null_count += 1;
+                        if null_count == 8 {
+                            let metadata_str = String::from_utf8_lossy(&metadata_buffer);
+                            metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
+                            tracing::debug!(metadata_prelude=?metadata_prelude);
+                            // Save remaining data after metadata
+                            remaining_data = bytes[i + 1..].to_vec();
+                            return (metadata_prelude, remaining_data);
+                        }
+                    } else {
+                        metadata_buffer.push(byte);
+                    }
+                }
+            }
+        }
+    }
+    (metadata_prelude, remaining_data)
 }
