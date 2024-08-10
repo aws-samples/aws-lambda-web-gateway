@@ -35,13 +35,7 @@ struct ApplicationState {
 async fn main() {
     tracing_subscriber::fmt::init();
 
-    let config = match Config::from_cli() {
-        Ok(config) => config,
-        Err(_) => {
-            let config_path = PathBuf::from("config.yaml");
-            Config::from_yaml_file(&config_path).expect("Failed to load configuration from file")
-        }
-    };
+    let config = Config::load().expect("Failed to load configuration");
     let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = Client::new(&aws_config);
 

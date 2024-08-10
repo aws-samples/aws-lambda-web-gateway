@@ -144,3 +144,11 @@ impl Config {
         })
     }
 }
+impl Config {
+    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
+        Self::from_cli().or_else(|_| {
+            let config_path = std::path::PathBuf::from("config.yaml");
+            Self::from_yaml_file(&config_path)
+        })
+    }
+}
