@@ -314,8 +314,8 @@ async fn collect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
     metadata_buffer: &mut Vec<u8>,
 ) -> (Option<MetadataPrelude>, Vec<u8>) {
-    let mut metadata_prelude = None;
-    let mut remaining_data = Vec::new();
+    let metadata_prelude = None;
+    let remaining_data = Vec::new();
 
     // Process the metadata_buffer first
     let (prelude, remaining) = process_buffer(metadata_buffer);
