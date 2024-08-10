@@ -220,6 +220,7 @@ async fn handle_streaming_response(
     let mut in_metadata = false;
     let mut null_count = 0;
     let mut metadata_prelude: Option<MetadataPrelude> = None;
+    let mut remaining_data = Vec::new();
 
     // Process metadata
     while let Some(event) = resp.event_stream.recv().await.unwrap() {
@@ -227,7 +228,7 @@ async fn handle_streaming_response(
             PayloadChunk(chunk) => {
                 if let Some(data) = chunk.payload() {
                     let bytes = data.clone().into_inner();
-                    for &byte in &bytes {
+                    for (i, &byte) in bytes.iter().enumerate() {
                         if !in_metadata && byte == b'{' {
                             in_metadata = true;
                         }
@@ -239,6 +240,8 @@ async fn handle_streaming_response(
                                     let metadata_str = String::from_utf8_lossy(&metadata_buffer[..metadata_buffer.len() - 8]);
                                     metadata_prelude = Some(serde_json::from_str(&metadata_str).unwrap_or_default());
                                     tracing::debug!(metadata_prelude=?metadata_prelude);
+                                    // Save remaining data after metadata
+                                    remaining_data = bytes[i+1..].to_vec();
                                     break;
                                 }
                             } else {
@@ -257,27 +260,22 @@ async fn handle_streaming_response(
 
     // Spawn task to handle remaining stream
     tokio::spawn(async move {
-        let mut first_chunk = true;
+        // Send remaining data after metadata first
+        if !remaining_data.is_empty() {
+            let stream_update = InvokeResponseStreamUpdate::builder()
+                .payload(Blob::new(remaining_data))
+                .build();
+            let _ = tx.send(PayloadChunk(stream_update)).await;
+        }
+
         while let Some(event) = resp.event_stream.recv().await.unwrap() {
             match event {
                 PayloadChunk(chunk) => {
                     if let Some(data) = chunk.payload() {
-                        if first_chunk {
-                            // Send remaining data after metadata
-                            let remaining = data.clone().into_inner()[metadata_buffer.len()..].to_vec();
-                            if !remaining.is_empty() {
-                                let stream_update = InvokeResponseStreamUpdate::builder()
-                                    .payload(Blob::new(remaining))
-                                    .build();
-                                let _ = tx.send(PayloadChunk(stream_update)).await;
-                            }
-                            first_chunk = false;
-                        } else {
-                            let stream_update = InvokeResponseStreamUpdate::builder()
-                                .payload(data.clone())
-                                .build();
-                            let _ = tx.send(PayloadChunk(stream_update)).await;
-                        }
+                        let stream_update = InvokeResponseStreamUpdate::builder()
+                            .payload(data.clone())
+                            .build();
+                        let _ = tx.send(PayloadChunk(stream_update)).await;
                     }
                 }
                 InvokeComplete(_) => {
