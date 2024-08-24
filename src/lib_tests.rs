@@ -4,27 +4,7 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use futures_util::Stream;
-
-struct MockEventStream {
-    events: Vec<Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>>,
-}
-
-impl Stream for MockEventStream {
-    type Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>;
-
-    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Poll::Ready(self.events.pop())
-    }
-}
-
-impl MockEventStream {
-    fn new(events: Vec<Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>>) -> Self {
-        MockEventStream { events }
-    }
-}
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
 
 #[tokio::test]
 async fn test_health() {
