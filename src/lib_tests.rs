@@ -67,7 +67,9 @@ async fn test_detect_metadata() {
     tx.send(Ok(chunk)).await.unwrap();
     drop(tx);
 
-    let event_receiver = EventReceiver::new(rx);
+    let event_receiver = EventReceiver {
+        inner: rx,
+    };
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
         .build()
@@ -98,7 +100,9 @@ async fn test_collect_metadata() {
     tx.send(Ok(chunk)).await.unwrap();
     drop(tx);
 
-    let event_receiver = EventReceiver::new(rx);
+    let event_receiver = EventReceiver {
+        inner: rx,
+    };
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
         .build()
