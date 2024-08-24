@@ -4,7 +4,8 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use aws_sdk_lambda::primitives::event_stream::EventStream;
+use futures::stream::iter;
 
 #[tokio::test]
 async fn test_health() {
@@ -62,12 +63,10 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+    let event_stream = EventStream::new(iter(vec![Ok(chunk)]));
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(EventReceiver::new(rx))
+        .event_stream(event_stream)
         .build()
         .unwrap();
 
@@ -92,12 +91,10 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+    let event_stream = EventStream::new(iter(vec![Ok(chunk)]));
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(EventReceiver::new(rx))
+        .event_stream(event_stream)
         .build()
         .unwrap();
 
