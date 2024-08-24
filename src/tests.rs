@@ -64,7 +64,7 @@ async fn test_detect_metadata() {
     );
     let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(payload))
+            .payload(Blob::new(full_payload))
             .build(),
     );
     let event_stream = futures_util::stream::once(async { Ok(chunk) });
