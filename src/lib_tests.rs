@@ -54,18 +54,18 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-use aws_smithy_types::event_stream::Receiver as SmithyReceiver;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use futures::Stream;
 use aws_sdk_lambda::error::SdkError;
+use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
 
 struct MockEventReceiver {
     events: Vec<InvokeWithResponseStreamResponseEvent>,
 }
 
 impl Stream for MockEventReceiver {
-    type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<aws_sdk_lambda::error::InvokeWithResponseStreamError>>;
+    type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>;
 
     fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if let Some(event) = self.events.pop() {
