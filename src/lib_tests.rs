@@ -1,8 +1,11 @@
 use super::*;
 use axum::http::StatusCode;
-use aws_sdk_lambda::types::{InvocationType, LogType};
 use aws_smithy_types::Blob;
 use std::collections::HashMap;
+use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
+use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use futures_util::stream;
 
 #[tokio::test]
 async fn test_health() {
@@ -48,30 +51,34 @@ async fn test_handle_buffered_response() {
         response.headers().get("Content-Type").unwrap(),
         "text/plain"
     );
-    let body = hyper::body::to_bytes(response.into_body()).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     assert_eq!(body, "Hello, World!");
 }
 
 #[tokio::test]
 async fn test_detect_metadata() {
+    use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
+    use aws_smithy_types::Blob;
+    use futures_util::stream;
+
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
-    let chunk = aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::PayloadChunk(
+    let full_payload = payload.as_bytes().to_vec();
+    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(payload))
+            .payload(Blob::new(full_payload.clone()))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+    let event_stream = stream::iter(vec![Ok(chunk)]);
 
     let mut resp = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
-        .event_stream(rx)
-        .build();
+        .event_stream(Box::pin(event_stream))
+        .build()
+        .unwrap();
 
     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
     assert!(has_metadata);
-    assert_eq!(first_chunk.unwrap(), payload.as_bytes());
+    assert_eq!(first_chunk.unwrap(), full_payload);
 }
 
 #[tokio::test]
@@ -84,18 +91,17 @@ async fn test_collect_metadata() {
     full_payload.extend_from_slice(&null_padding);
     full_payload.extend_from_slice(remaining_data);
 
-    let chunk = aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::PayloadChunk(
+    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+    let event_stream = stream::iter(vec![Ok(chunk)]);
 
-    let mut resp = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
-        .event_stream(rx)
-        .build();
+    let mut resp = InvokeWithResponseStreamOutput::builder()
+        .event_stream(Box::pin(event_stream))
+        .build()
+        .unwrap();
 
     let mut metadata_buffer = Vec::new();
     let (metadata_prelude, remaining) = collect_metadata(&mut resp, &mut metadata_buffer).await;
