@@ -3,11 +3,10 @@ use axum::http::StatusCode;
 use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
-use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use aws_sdk_lambda::operation::invoke_with_response_stream::{InvokeWithResponseStreamOutput, InvokeWithResponseStreamError};
 use aws_sdk_lambda::primitives::event_stream::Message;
-use futures::stream::iter;
+use futures::stream::{iter, Stream};
 use std::pin::Pin;
-use futures::Stream;
 
 #[tokio::test]
 async fn test_health() {
@@ -65,7 +64,7 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let event_stream = Box::pin(iter(vec![Ok(Message::from(chunk))])) as Pin<Box<dyn Stream<Item = Result<Message, aws_sdk_lambda::error::SdkError<aws_sdk_lambda::error::InvokeWithResponseStreamError>>>>>;
+    let event_stream = Box::pin(iter(vec![Ok(chunk)])) as Pin<Box<dyn Stream<Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::error::SdkError<InvokeWithResponseStreamError>>>>>;
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_stream)
@@ -93,7 +92,7 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let event_stream = Box::pin(iter(vec![Ok(Message::from(chunk))])) as Pin<Box<dyn Stream<Item = Result<Message, aws_sdk_lambda::error::SdkError<aws_sdk_lambda::error::InvokeWithResponseStreamError>>>>>;
+    let event_stream = Box::pin(iter(vec![Ok(chunk)])) as Pin<Box<dyn Stream<Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::error::SdkError<InvokeWithResponseStreamError>>>>>;
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_stream)
