@@ -264,20 +264,18 @@ async fn handle_streaming_response(
         }
     });
 
-    let stream = ReceiverStream::new(rx).map(|event_result| {
-        match event_result {
-            Ok(Ok(event)) => match event {
-                InvokeComplete(_) => Ok(Bytes::default()),
-                PayloadChunk(chunk) => match chunk.payload() {
-                    Some(data) => {
-                        let bytes = data.clone().into_inner();
-                        Ok(Bytes::from(bytes))
-                    }
-                    None => Ok(Bytes::default()),
-                },
-                _ => Ok(Bytes::default()), // Handle other event types
+    let stream = ReceiverStream::new(rx).map(|event| {
+        match event {
+            PayloadChunk(chunk) => {
+                if let Some(data) = chunk.payload() {
+                    let bytes = data.clone().into_inner();
+                    Ok(Bytes::from(bytes))
+                } else {
+                    Ok(Bytes::default())
+                }
             },
-            _ => Ok(Bytes::default()), // Handle error cases
+            InvokeComplete(_) => Ok(Bytes::default()),
+            _ => Ok(Bytes::default()), // Handle other event types
         }
     });
 
@@ -307,7 +305,7 @@ async fn handle_streaming_response(
 async fn detect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
 ) -> (bool, Option<Vec<u8>>) {
-    if let Some(Ok(Ok(event))) = resp.event_stream.recv().await {
+    if let Ok(Some(event)) = resp.event_stream.recv().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
@@ -333,7 +331,7 @@ async fn collect_metadata(
     }
 
     // If metadata is not complete, continue processing the stream
-    while let Some(Ok(Ok(event))) = resp.event_stream.recv().await {
+    while let Ok(Some(event)) = resp.event_stream.recv().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
