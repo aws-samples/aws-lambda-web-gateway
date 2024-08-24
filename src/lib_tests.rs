@@ -5,7 +5,6 @@ use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
 use aws_sdk_lambda::primitives::event_stream::EventReceiver;
-use aws_sdk_lambda::primitives::event_stream::EventStream;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
 
 #[tokio::test]
@@ -56,15 +55,6 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-use aws_sdk_lambda::primitives::event_stream::EventStream;
-
-fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamResponseEventError> {
-    let stream = EventStream::new(futures::stream::iter(events.into_iter().map(Ok)));
-    EventReceiver {
-        inner: stream,
-    }
-}
-
 #[tokio::test]
 async fn test_detect_metadata() {
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
@@ -75,7 +65,9 @@ async fn test_detect_metadata() {
             .build(),
     );
 
-    let event_receiver = create_mock_event_receiver(vec![chunk]);
+    let event_receiver = EventReceiver {
+        inner: vec![chunk],
+    };
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
@@ -107,7 +99,9 @@ async fn test_collect_metadata() {
             .build(),
     );
 
-    let event_receiver = create_mock_event_receiver(vec![chunk]);
+    let event_receiver =EventReceiver {
+        inner: vec![chunk],
+    };
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
