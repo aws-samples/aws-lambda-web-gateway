@@ -2,7 +2,6 @@ use crate::config::{AuthMode, Config, LambdaInvokeMode};
 use std::collections::HashSet;
 use std::fs;
 use std::env;
-use std::path::PathBuf;
 
 #[test]
 fn test_from_yaml_file() {
@@ -35,10 +34,11 @@ fn test_from_yaml_file_default_values() {
 lambda_function_name: test-function
 "#;
 
-    let temp_file = NamedTempFile::new().unwrap();
-    fs::write(temp_file.path(), config_yaml).unwrap();
+    let temp_dir = env::temp_dir();
+    let temp_file_path = temp_dir.join("test_config_default.yaml");
+    fs::write(&temp_file_path, config_yaml).unwrap();
 
-    let config = Config::from_yaml_file(temp_file.path()).unwrap();
+    let config = Config::from_yaml_file(&temp_file_path).unwrap();
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
@@ -54,10 +54,11 @@ api_keys:
   - key1
 "#;
 
-    let temp_file = NamedTempFile::new().unwrap();
-    fs::write(temp_file.path(), config_yaml).unwrap();
+    let temp_dir = env::temp_dir();
+    let temp_file_path = temp_dir.join("test_config_missing_field.yaml");
+    fs::write(&temp_file_path, config_yaml).unwrap();
 
-    let result = Config::from_yaml_file(temp_file.path());
+    let result = Config::from_yaml_file(&temp_file_path);
     assert!(result.is_err());
 }
 
