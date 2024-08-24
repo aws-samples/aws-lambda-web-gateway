@@ -65,7 +65,9 @@ use aws_sdk_lambda::primitives::event_stream::EventStream;
 
 fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, InvokeWithResponseStreamError> {
     let stream = EventStream::new(futures::stream::iter(events.into_iter().map(Ok)));
-    EventReceiver::new(stream)
+    EventReceiver {
+        inner: stream,
+    }
 }
 
 #[tokio::test]
