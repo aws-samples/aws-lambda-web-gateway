@@ -61,36 +61,11 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-struct MockEventStream {
-    receiver: ReceiverStream<Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>>,
-}
-
-impl MockEventStream {
-    fn new(events: Vec<InvokeWithResponseStreamResponseEvent>) -> Self {
-        let (tx, rx) = mpsc::channel(100);
-        for event in events {
-            let tx = tx.clone();
-            tokio::spawn(async move {
-                let _ = tx.send(Ok(event)).await;
-            });
-        }
-        Self {
-            receiver: ReceiverStream::new(rx),
-        }
-    }
-}
-
-impl Stream for MockEventStream {
-    type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.receiver).poll_next(cx)
-    }
-}
+use aws_sdk_lambda::primitives::event_stream::EventStream;
 
 fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, InvokeWithResponseStreamError> {
-    let mock_stream = MockEventStream::new(events);
-    EventReceiver::new(mock_stream)
+    let stream = EventStream::new(futures::stream::iter(events.into_iter().map(Ok)));
+    EventReceiver::new(stream)
 }
 
 #[tokio::test]
