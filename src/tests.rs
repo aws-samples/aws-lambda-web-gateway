@@ -4,6 +4,7 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
 use futures_util::stream;
 
 #[tokio::test]
