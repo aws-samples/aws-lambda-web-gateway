@@ -10,14 +10,14 @@ A high-performance web gateway for AWS Lambda functions, written in Rust.
 - Request transformation from HTTP to Lambda-compatible format
 - Automatic handling of base64 encoding/decoding for request/response bodies
 - Built with Rust and Axum for high performance and reliability
-- Docker support for easy deployment and scaling
+- Health check endpoint for monitoring
+- Flexible configuration via YAML file or command-line arguments
 
 ## Prerequisites
 
 - Rust (latest stable version)
 - AWS account and credentials configured
 - AWS Lambda function(s) to be exposed via the gateway
-- Docker (optional, for containerized deployment)
 
 ## Configuration
 
@@ -43,8 +43,8 @@ api_keys:
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/lambda-web-gateway.git
-   cd lambda-web-gateway
+   git clone https://github.com/aws-samples/aws-lambda-web-gateway.git
+   cd aws-lambda-web-gateway
    ```
 
 2. Build the project:
@@ -62,20 +62,6 @@ api_keys:
    ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode ResponseStream --auth-mode ApiKey --api-keys key1,key2
    ```
 
-## Docker Deployment
-
-To build and run using Docker:
-
-1. Build the Docker image:
-   ```
-   docker build -t lambda-web-gateway .
-   ```
-
-2. Run the container:
-   ```
-   docker run -p 8000:8000 -v /path/to/your/config.yaml:/config.yaml lambda-web-gateway
-   ```
-
 ## Usage
 
 Once running, the gateway listens for HTTP requests on `0.0.0.0:8000`. All requests (except `/healthz`) are forwarded to the configured Lambda function.
@@ -91,10 +77,22 @@ For API Key authentication, include the key in the `x-api-key` header or as a Be
 - Streaming responses are supported for improved performance with large payloads.
 - The use of Rust and Axum ensures efficient resource utilization.
 
+## Development
+
+To contribute to the project:
+
+1. Fork the repository
+2. Create a new branch for your feature
+3. Implement your changes
+4. Write tests for your new functionality
+5. Submit a pull request
+
+Please refer to [CONTRIBUTING.md](CONTRIBUTING.md) for more details on the contribution process.
+
 ## Security
 
-See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+See [CONTRIBUTING.md](CONTRIBUTING.md#security-issue-notifications) for more information on reporting security issues.
 
 ## License
 
-This library is licensed under the MIT-0 License. See the LICENSE file.
+This project is licensed under the MIT-0 License. See the [LICENSE](LICENSE) file for details.
