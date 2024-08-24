@@ -4,9 +4,12 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::EventStream;
+use aws_sdk_lambda::primitives::event_stream::EventStreamReader;
 use std::pin::Pin;
 use std::task::{Context, Poll};
+use futures_util::Stream;
+
+use std::task::Poll;
 use futures_util::Stream;
 
 struct MockEventStream {
@@ -82,8 +85,9 @@ async fn test_detect_metadata() {
         events: vec![Ok(chunk)],
     };
 
+    let event_stream_reader = EventStreamReader::new(Box::pin(event_stream));
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(EventStream::new(Box::pin(event_stream)))
+        .event_stream(event_stream_reader)
         .build()
         .unwrap();
 
