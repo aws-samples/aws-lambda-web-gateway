@@ -54,6 +54,27 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
+use aws_smithy_http::event_stream::Receiver as SmithyReceiver;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use futures::Stream;
+
+struct MockEventReceiver {
+    events: Vec<InvokeWithResponseStreamResponseEvent>,
+}
+
+impl Stream for MockEventReceiver {
+    type Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if let Some(event) = self.events.pop() {
+            Poll::Ready(Some(Ok(event)))
+        } else {
+            Poll::Ready(None)
+        }
+    }
+}
+
 #[tokio::test]
 async fn test_detect_metadata() {
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
@@ -63,13 +84,15 @@ async fn test_detect_metadata() {
             .payload(Blob::new(full_payload.clone()))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+
+    let mock_receiver = MockEventReceiver {
+        events: vec![chunk],
+    };
 
     let event_receiver = EventReceiver {
-        inner: rx,
+        inner: SmithyReceiver::new(Box::pin(mock_receiver)),
     };
+
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
         .build()
@@ -96,13 +119,15 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
+
+    let mock_receiver = MockEventReceiver {
+        events: vec![chunk],
+    };
 
     let event_receiver = EventReceiver {
-        inner: rx,
+        inner: SmithyReceiver::new(Box::pin(mock_receiver)),
     };
+
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
         .build()
