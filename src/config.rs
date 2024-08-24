@@ -36,12 +36,16 @@ pub enum LambdaInvokeMode {
     ResponseStream,
 }
 
-impl LambdaInvokeMode {
-    pub fn from_str(s: &str) -> Self {
+use std::str::FromStr;
+
+impl FromStr for LambdaInvokeMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "buffered" => LambdaInvokeMode::Buffered,
-            "responsestream" => LambdaInvokeMode::ResponseStream,
-            _ => panic!("Invalid invoke mode: {}", s),
+            "buffered" => Ok(LambdaInvokeMode::Buffered),
+            "responsestream" => Ok(LambdaInvokeMode::ResponseStream),
+            _ => Err(format!("Invalid invoke mode: {}", s)),
         }
     }
 }
@@ -53,6 +57,11 @@ impl Config {
         
         if config.lambda_function_name.is_empty() {
             return Err("lambda_function_name is required in the config file".into());
+        }
+        
+        // Set default value for lambda_invoke_mode if not specified
+        if config.lambda_invoke_mode == LambdaInvokeMode::Buffered {
+            config.lambda_invoke_mode = LambdaInvokeMode::Buffered;
         }
         
         Ok(config)
@@ -86,15 +95,9 @@ impl Config {
                     .short('m')
                     .long("lambda-invoke-mode")
                     .value_name("INVOKE_MODE")
-                    .help("Sets the Lambda invoke mode")
+                    .help("Sets the Lambda invoke mode (default: Buffered)")
                     .required(false)
-                    .value_parser(|s: &str| {
-                        match s.to_lowercase().as_str() {
-                            "buffered" => Ok(LambdaInvokeMode::Buffered),
-                            "responsestream" => Ok(LambdaInvokeMode::ResponseStream),
-                            _ => Err(format!("Invalid invoke mode: {}", s)),
-                        }
-                    }),
+                    .value_parser(value_parser!(LambdaInvokeMode)),
             )
             .arg(
                 Arg::new("api-keys")
@@ -126,15 +129,10 @@ impl Config {
             .get_one::<String>("lambda-function-name")
             .expect("lambda-function-name is required")
             .clone();
-        let lambda_invoke_mode = match matches
-            .get_one::<String>("lambda-invoke-mode")
-            .ok_or("Missing lambda-invoke-mode")?
-            .as_str()
-        {
-            "Buffered" => LambdaInvokeMode::Buffered,
-            "ResponseStream" => LambdaInvokeMode::ResponseStream,
-            _ => return Err("Invalid invoke mode".into()),
-        };
+        let lambda_invoke_mode = matches
+            .get_one::<LambdaInvokeMode>("lambda-invoke-mode")
+            .cloned()
+            .unwrap_or(LambdaInvokeMode::Buffered);
         let api_keys: HashSet<String> = matches
             .get_many::<String>("api-keys")
             .ok_or("Missing api-keys")?
