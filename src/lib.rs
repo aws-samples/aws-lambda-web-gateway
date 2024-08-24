@@ -302,7 +302,7 @@ async fn handle_streaming_response(
 async fn detect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
 ) -> (bool, Option<Vec<u8>>) {
-    if let Some(event) = resp.event_stream.recv().await.unwrap() {
+    if let Some(Ok(event)) = resp.event_stream.next().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
@@ -318,8 +318,8 @@ async fn collect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
     metadata_buffer: &mut Vec<u8>,
 ) -> (Option<MetadataPrelude>, Vec<u8>) {
-    let metadata_prelude = None;
-    let remaining_data = Vec::new();
+    let mut metadata_prelude = None;
+    let mut remaining_data = Vec::new();
 
     // Process the metadata_buffer first
     let (prelude, remaining) = process_buffer(metadata_buffer);
@@ -328,14 +328,16 @@ async fn collect_metadata(
     }
 
     // If metadata is not complete, continue processing the stream
-    while let Some(event) = resp.event_stream.recv().await.unwrap() {
+    while let Some(Ok(event)) = resp.event_stream.next().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
                 metadata_buffer.extend_from_slice(&bytes);
                 let (prelude, remaining) = process_buffer(metadata_buffer);
                 if let Some(p) = prelude {
-                    return (Some(p), remaining);
+                    metadata_prelude = Some(p);
+                    remaining_data = remaining;
+                    break;
                 }
             }
         }
