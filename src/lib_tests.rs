@@ -5,9 +5,11 @@ use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
 use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use futures::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
-use futures::Stream;
+use aws_sdk_lambda::error::SdkError;
+use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
 
 #[tokio::test]
 async fn test_health() {
@@ -57,13 +59,6 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-use aws_sdk_lambda::error::SdkError;
-use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
-use aws_smithy_http::event_stream::receiver::Receiver;
-use futures::Stream;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-
 struct MockEventReceiver {
     events: Vec<InvokeWithResponseStreamResponseEvent>,
 }
@@ -77,12 +72,6 @@ impl Stream for MockEventReceiver {
         } else {
             Poll::Ready(None)
         }
-    }
-}
-
-impl From<MockEventReceiver> for Receiver<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>> {
-    fn from(mock: MockEventReceiver) -> Self {
-        Receiver::new(Box::pin(mock))
     }
 }
 
@@ -100,10 +89,8 @@ async fn test_detect_metadata() {
         events: vec![chunk],
     };
 
-    let event_receiver: Receiver<_, _> = mock_receiver.into();
-
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(Box::pin(mock_receiver))
         .build()
         .unwrap();
 
