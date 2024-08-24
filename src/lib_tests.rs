@@ -4,9 +4,22 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::EventReceiver;
-use futures_util::stream;
-use tokio::sync::mpsc;
+use aws_sdk_lambda::primitives::event_stream::EventStream;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use futures_util::Stream;
+
+struct MockEventStream {
+    events: Vec<Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>>,
+}
+
+impl Stream for MockEventStream {
+    type Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::Error>;
+
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Poll::Ready(self.events.pop())
+    }
+}
 
 #[tokio::test]
 async fn test_health() {
@@ -58,9 +71,6 @@ async fn test_handle_buffered_response() {
 
 #[tokio::test]
 async fn test_detect_metadata() {
-    let (tx, rx) = mpsc::channel(1);
-    let event_receiver = EventReceiver::new(rx);
-
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
     let full_payload = payload.as_bytes().to_vec();
     let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
@@ -68,13 +78,12 @@ async fn test_detect_metadata() {
             .payload(Blob::new(full_payload.clone()))
             .build(),
     );
-
-    tokio::spawn(async move {
-        tx.send(Ok(chunk)).await.unwrap();
-    });
+    let event_stream = MockEventStream {
+        events: vec![Ok(chunk)],
+    };
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(EventStream::new(Box::pin(event_stream)))
         .build()
         .unwrap();
 
@@ -86,9 +95,6 @@ async fn test_detect_metadata() {
 
 #[tokio::test]
 async fn test_collect_metadata() {
-    let (tx, rx) = mpsc::channel(1);
-    let event_receiver = EventReceiver::new(rx);
-
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
     let null_padding = vec![0u8; 8];
     let remaining_data = b"Remaining data";
@@ -102,13 +108,12 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-
-    tokio::spawn(async move {
-        tx.send(Ok(chunk)).await.unwrap();
-    });
+    let event_stream = MockEventStream {
+        events: vec![Ok(chunk)],
+    };
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(EventStream::new(Box::pin(event_stream)))
         .build()
         .unwrap();
 
