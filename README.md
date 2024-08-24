@@ -60,12 +60,12 @@ addr: "0.0.0.0:8000"  # Optional, defaults to "0.0.0.0:8000"
 
    Or with command-line arguments:
    ```
-   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode ResponseStream --auth-mode ApiKey --api-keys key1,key2
+   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode ResponseStream --auth-mode ApiKey --api-keys key1,key2 --bind-address 127.0.0.1:3000
    ```
 
 ## Usage
 
-Once running, the gateway listens for HTTP requests on `0.0.0.0:8000`. All requests (except `/healthz`) are forwarded to the configured Lambda function.
+Once running, the gateway listens for HTTP requests on the configured address (default: `0.0.0.0:8000`). All requests (except `/healthz`) are forwarded to the configured Lambda function.
 
 - Health check: `GET /healthz`
 - Lambda invocation: Any method on `/` or `/*path`
