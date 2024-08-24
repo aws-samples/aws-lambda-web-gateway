@@ -62,12 +62,13 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let event_stream = stream::iter(vec![Ok(chunk)]);
+    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    tx.send(Ok(chunk)).await.unwrap();
+    drop(tx);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(Box::pin(event_stream))
-        .build()
-        .unwrap();
+        .event_stream(rx)
+        .build();
 
     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
