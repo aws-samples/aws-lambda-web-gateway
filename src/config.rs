@@ -4,6 +4,7 @@ use serde_yaml;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
