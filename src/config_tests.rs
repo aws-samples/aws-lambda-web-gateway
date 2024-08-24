@@ -1,7 +1,8 @@
 use crate::config::{AuthMode, Config, LambdaInvokeMode};
 use std::collections::HashSet;
 use std::fs;
-use tempfile::NamedTempFile;
+use std::env;
+use std::path::PathBuf;
 
 #[test]
 fn test_from_yaml_file() {
@@ -15,10 +16,11 @@ auth_mode: ApiKey
 addr: 127.0.0.1:8080
 "#;
 
-    let temp_file = NamedTempFile::new().unwrap();
-    fs::write(temp_file.path(), config_yaml).unwrap();
+    let temp_dir = env::temp_dir();
+    let temp_file_path = temp_dir.join("test_config.yaml");
+    fs::write(&temp_file_path, config_yaml).unwrap();
 
-    let config = Config::from_yaml_file(temp_file.path()).unwrap();
+    let config = Config::from_yaml_file(&temp_file_path).unwrap();
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
