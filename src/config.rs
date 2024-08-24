@@ -9,6 +9,7 @@ use std::str::FromStr;
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub lambda_function_name: String,
+    #[serde(default = "default_lambda_invoke_mode")]
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
     #[serde(default = "default_auth_mode")]
@@ -18,6 +19,10 @@ pub struct Config {
 
 fn default_auth_mode() -> AuthMode {
     AuthMode::Open
+}
+
+fn default_lambda_invoke_mode() -> LambdaInvokeMode {
+    LambdaInvokeMode::Buffered
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -59,15 +64,10 @@ impl FromStr for LambdaInvokeMode {
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_content = fs::read_to_string(path)?;
-        let mut config: Config = serde_yaml::from_str(&config_content)?;
+        let config: Config = serde_yaml::from_str(&config_content)?;
         
         if config.lambda_function_name.is_empty() {
             return Err("lambda_function_name is required in the config file".into());
-        }
-        
-        // Set default value for lambda_invoke_mode if not specified
-        if config.lambda_invoke_mode == LambdaInvokeMode::Buffered {
-            config.lambda_invoke_mode = LambdaInvokeMode::Buffered;
         }
         
         Ok(config)
