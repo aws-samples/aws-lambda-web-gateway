@@ -20,7 +20,7 @@ use axum::{
     Router,
 };
 use base64::Engine;
-use futures_util::stream::StreamExt;
+use futures_util::stream::{StreamExt, Stream};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -302,6 +302,7 @@ async fn handle_streaming_response(
 async fn detect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
 ) -> (bool, Option<Vec<u8>>) {
+    use futures_util::StreamExt;
     if let Some(Ok(event)) = resp.event_stream.next().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
@@ -318,6 +319,7 @@ async fn collect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
     metadata_buffer: &mut Vec<u8>,
 ) -> (Option<MetadataPrelude>, Vec<u8>) {
+    use futures_util::StreamExt;
     let mut metadata_prelude = None;
     let mut remaining_data = Vec::new();
 

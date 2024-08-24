@@ -3,9 +3,8 @@ use axum::http::StatusCode;
 use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
-use aws_sdk_lambda::operation::invoke_with_response_stream::{InvokeWithResponseStreamOutput, InvokeWithResponseStreamError};
-use aws_sdk_lambda::primitives::event_stream::EventReceiver;
-use tokio::sync::mpsc;
+use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use futures_util::stream;
 
 #[tokio::test]
 async fn test_health() {
