@@ -10,8 +10,13 @@ pub struct Config {
     pub lambda_function_name: String,
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
+    #[serde(default = "default_auth_mode")]
     pub auth_mode: AuthMode,
     pub addr: String,
+}
+
+fn default_auth_mode() -> AuthMode {
+    AuthMode::Open
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -113,15 +118,9 @@ impl Config {
                     .short('a')
                     .long("auth-mode")
                     .value_name("AUTH_MODE")
-                    .help("Sets the authentication mode")
+                    .help("Sets the authentication mode (default: Open)")
                     .required(false)
-                    .value_parser(|s: &str| {
-                        match s.to_lowercase().as_str() {
-                            "open" => Ok(AuthMode::Open),
-                            "apikey" => Ok(AuthMode::ApiKey),
-                            _ => Err(format!("Invalid auth mode: {}", s)),
-                        }
-                    }),
+                    .value_parser(value_parser!(AuthMode)),
             )
             .get_matches();
 
@@ -139,15 +138,10 @@ impl Config {
             .map(|s| s.clone())
             .collect();
 
-        let auth_mode = match matches
-            .get_one::<String>("auth-mode")
-            .ok_or("Missing auth-mode")?
-            .as_str()
-        {
-            "Open" => AuthMode::Open,
-            "ApiKey" => AuthMode::ApiKey,
-            _ => return Err("Invalid auth mode".into()),
-        };
+        let auth_mode = matches
+            .get_one::<AuthMode>("auth-mode")
+            .cloned()
+            .unwrap_or(AuthMode::Open);
 
         let addr = matches
             .get_one::<String>("addr")
