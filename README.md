@@ -23,7 +23,7 @@ A high-performance web gateway for AWS Lambda functions, written in Rust.
 
 The gateway can be configured using either a YAML file (`config.yaml`) or command-line arguments. Configuration options include:
 
-- Lambda function name
+- Lambda function name (required)
 - Lambda invoke mode (Buffered or ResponseStream)
 - API keys (for API Key authentication mode)
 - Authentication mode (Open or ApiKey)
@@ -31,7 +31,7 @@ The gateway can be configured using either a YAML file (`config.yaml`) or comman
 Example `config.yaml`:
 
 ```yaml
-lambda_function_name: "my-lambda-function"
+lambda_function_name: "my-lambda-function"  # Required
 lambda_invoke_mode: "ResponseStream"
 auth_mode: "ApiKey"
 api_keys:

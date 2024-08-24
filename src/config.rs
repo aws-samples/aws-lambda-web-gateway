@@ -49,7 +49,12 @@ impl LambdaInvokeMode {
 impl Config {
     pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let config_content = fs::read_to_string(path)?;
-        let config: Config = serde_yaml::from_str(&config_content)?;
+        let mut config: Config = serde_yaml::from_str(&config_content)?;
+        
+        if config.lambda_function_name.is_empty() {
+            return Err("lambda_function_name is required in the config file".into());
+        }
+        
         Ok(config)
     }
 
@@ -73,7 +78,7 @@ impl Config {
                     .long("lambda-function-name")
                     .value_name("FUNCTION_NAME")
                     .help("Sets the Lambda function name")
-                    .required(false)
+                    .required(true)
                     .value_parser(value_parser!(String)),
             )
             .arg(
@@ -119,7 +124,7 @@ impl Config {
 
         let lambda_function_name = matches
             .get_one::<String>("lambda-function-name")
-            .ok_or("Missing lambda-function-name")?
+            .expect("lambda-function-name is required")
             .clone();
         let lambda_invoke_mode = match matches
             .get_one::<String>("lambda-invoke-mode")
