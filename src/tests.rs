@@ -63,14 +63,10 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let (tx, rx) = mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
-
-    let event_receiver = EventReceiver::new(rx);
+    let event_stream = stream::iter(vec![Ok(chunk)]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(Box::pin(event_stream))
         .build()
         .unwrap();
 
@@ -95,14 +91,10 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let (tx, rx) = mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
-
-    let event_receiver = EventReceiver::new(rx);
+    let event_stream = stream::iter(vec![Ok(chunk)]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(Box::pin(event_stream))
         .build()
         .unwrap();
 
