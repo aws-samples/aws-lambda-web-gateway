@@ -4,7 +4,10 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::{EventReceiver, IntoEventStream};
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use std::pin::Pin;
+use std::task::{Context, Poll};
+use futures::Stream;
 
 #[tokio::test]
 async fn test_health() {
@@ -64,11 +67,15 @@ struct MockEventReceiver {
     events: Vec<InvokeWithResponseStreamResponseEvent>,
 }
 
-impl IntoEventStream for MockEventReceiver {
-    type EventStream = Self;
+impl Stream for MockEventReceiver {
+    type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>;
 
-    fn into_event_stream(self) -> Self::EventStream {
-        self
+    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if let Some(event) = self.events.pop() {
+            Poll::Ready(Some(Ok(event)))
+        } else {
+            Poll::Ready(None)
+        }
     }
 }
 
@@ -98,7 +105,7 @@ async fn test_detect_metadata() {
         events: vec![chunk],
     };
 
-    let event_receiver = EventReceiver::new(mock_receiver.into_event_stream());
+    let event_receiver = EventReceiver::new(mock_receiver);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
         .event_stream(event_receiver)
