@@ -4,6 +4,7 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
 use futures::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -87,6 +88,11 @@ impl Stream for MockEventStream {
     }
 }
 
+fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, InvokeWithResponseStreamError> {
+    let mock_stream = MockEventStream::new(events);
+    EventReceiver::new(mock_stream)
+}
+
 #[tokio::test]
 async fn test_detect_metadata() {
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
@@ -97,10 +103,10 @@ async fn test_detect_metadata() {
             .build(),
     );
 
-    let mock_stream = MockEventStream::new(vec![chunk]);
+    let event_receiver = create_mock_event_receiver(vec![chunk]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(Box::pin(mock_stream))
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
@@ -126,10 +132,10 @@ async fn test_collect_metadata() {
             .build(),
     );
 
-    let mock_stream = MockEventStream::new(vec![chunk]);
+    let event_receiver = create_mock_event_receiver(vec![chunk]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(Box::pin(mock_stream))
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
