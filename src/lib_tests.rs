@@ -63,7 +63,7 @@ async fn test_handle_buffered_response() {
 
 use aws_sdk_lambda::primitives::event_stream::EventStream;
 
-fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, InvokeWithResponseStreamError> {
+fn create_mock_event_receiver(events: Vec<InvokeWithResponseStreamResponseEvent>) -> EventReceiver<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamResponseEventError> {
     let stream = EventStream::new(futures::stream::iter(events.into_iter().map(Ok)));
     EventReceiver {
         inner: stream,
@@ -86,6 +86,9 @@ async fn test_detect_metadata() {
         .event_stream(event_receiver)
         .build()
         .unwrap();
+
+    // Type annotation to help the compiler
+    let resp: InvokeWithResponseStreamOutput = resp;
 
     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
