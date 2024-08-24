@@ -34,6 +34,10 @@ http-serde = "2.1.0"
 name = "lambda-web-gateway"
 path = "src/main.rs"
 
+[lib]
+name = "lambda_web_gateway"
+path = "src/lib.rs"
+
 [profile.release]
 strip = true
 lto = true
