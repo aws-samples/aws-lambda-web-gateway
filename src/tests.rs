@@ -66,9 +66,16 @@ async fn test_detect_metadata() {
     tx.send(Ok(chunk)).await.unwrap();
     drop(tx);
 
-    let mut resp = InvokeWithResponseStreamOutput::builder()
+    let event_receiver = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
         .event_stream(rx)
-        .build();
+        .build()
+        .unwrap()
+        .event_stream;
+
+    let mut resp = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
+        .event_stream(event_receiver)
+        .build()
+        .unwrap();
 
     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 

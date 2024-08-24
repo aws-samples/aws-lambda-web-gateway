@@ -20,7 +20,7 @@ use axum::{
     Router,
 };
 use base64::Engine;
-use futures_util::stream::Stream;
+use futures_util::stream::{Stream, StreamExt};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::collections::HashMap;
@@ -264,7 +264,8 @@ async fn handle_streaming_response(
         }
     });
 
-    let stream = ReceiverStream::new(rx).map(|event| match event {
+    let stream = ReceiverStream::new(rx).map(|event_result| match event_result {
+        Ok(event) => match event {
         InvokeComplete(_) => Ok(Bytes::default()),
         PayloadChunk(chunk) => match chunk.payload() {
             Some(data) => {
@@ -302,7 +303,7 @@ async fn handle_streaming_response(
 async fn detect_metadata(
     resp: &mut aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput,
 ) -> (bool, Option<Vec<u8>>) {
-    if let Some(Ok(event)) = resp.event_stream.recv().await {
+    if let Ok(Some(Ok(event))) = resp.event_stream.recv().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
@@ -328,7 +329,7 @@ async fn collect_metadata(
     }
 
     // If metadata is not complete, continue processing the stream
-    while let Some(Ok(event)) = resp.event_stream.recv().await {
+    while let Ok(Some(Ok(event))) = resp.event_stream.recv().await {
         if let PayloadChunk(chunk) = event {
             if let Some(data) = chunk.payload() {
                 let bytes = data.clone().into_inner();
