@@ -4,6 +4,7 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
 
 #[tokio::test]
 async fn test_health() {
@@ -49,7 +50,7 @@ async fn test_handle_buffered_response() {
         response.headers().get("Content-Type").unwrap(),
         "text/plain"
     );
-    let body = axum::body::to_bytes(response.into_body()).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
     assert_eq!(body, "Hello, World!");
 }
 
@@ -66,7 +67,7 @@ async fn test_detect_metadata() {
     drop(tx);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(aws_sdk_lambda::event_stream::EventReceiver::new(rx))
+        .event_stream(EventReceiver::new(rx))
         .build()
         .unwrap();
 
@@ -96,7 +97,7 @@ async fn test_collect_metadata() {
     drop(tx);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(aws_sdk_lambda::event_stream::EventReceiver::new(rx))
+        .event_stream(EventReceiver::new(rx))
         .build()
         .unwrap();
 
