@@ -11,9 +11,11 @@ pub struct Config {
     pub lambda_function_name: String,
     #[serde(default = "default_lambda_invoke_mode")]
     pub lambda_invoke_mode: LambdaInvokeMode,
+    #[serde(default)]
     pub api_keys: HashSet<String>,
     #[serde(default = "default_auth_mode")]
     pub auth_mode: AuthMode,
+    #[serde(default)]
     pub addr: String,
 }
 
