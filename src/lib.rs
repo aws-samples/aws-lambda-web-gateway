@@ -1,5 +1,8 @@
 pub mod config;
 
+#[cfg(test)]
+mod tests;
+
 use crate::config::{Config, LambdaInvokeMode};
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
