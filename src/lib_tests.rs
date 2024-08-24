@@ -4,12 +4,13 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::EventReceiver;
 use futures::Stream;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use aws_sdk_lambda::error::SdkError;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 
 #[tokio::test]
 async fn test_health() {
@@ -59,19 +60,30 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-struct MockEventReceiver {
-    events: Vec<InvokeWithResponseStreamResponseEvent>,
+struct MockEventStream {
+    receiver: ReceiverStream<Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>>,
 }
 
-impl Stream for MockEventReceiver {
+impl MockEventStream {
+    fn new(events: Vec<InvokeWithResponseStreamResponseEvent>) -> Self {
+        let (tx, rx) = mpsc::channel(100);
+        for event in events {
+            let tx = tx.clone();
+            tokio::spawn(async move {
+                let _ = tx.send(Ok(event)).await;
+            });
+        }
+        Self {
+            receiver: ReceiverStream::new(rx),
+        }
+    }
+}
+
+impl Stream for MockEventStream {
     type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>;
 
-    fn poll_next(mut self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if let Some(event) = self.events.pop() {
-            Poll::Ready(Some(Ok(event)))
-        } else {
-            Poll::Ready(None)
-        }
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        Pin::new(&mut self.receiver).poll_next(cx)
     }
 }
 
@@ -85,12 +97,10 @@ async fn test_detect_metadata() {
             .build(),
     );
 
-    let mock_receiver = MockEventReceiver {
-        events: vec![chunk],
-    };
+    let mock_stream = MockEventStream::new(vec![chunk]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(Box::pin(mock_receiver))
+        .event_stream(Box::pin(mock_stream))
         .build()
         .unwrap();
 
@@ -116,14 +126,10 @@ async fn test_collect_metadata() {
             .build(),
     );
 
-    let mock_receiver = MockEventReceiver {
-        events: vec![chunk],
-    };
-
-    let event_receiver = EventReceiver::new(mock_receiver.into_event_stream());
+    let mock_stream = MockEventStream::new(vec![chunk]);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(Box::pin(mock_stream))
         .build()
         .unwrap();
 
