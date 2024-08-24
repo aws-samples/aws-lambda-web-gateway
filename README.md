@@ -91,10 +91,10 @@ For API Key authentication, include the key in the `x-api-key` header or as a Be
 - Streaming responses are supported for improved performance with large payloads.
 - The use of Rust and Axum ensures efficient resource utilization.
 
-## Contributing
+## Security
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This library is licensed under the MIT-0 License. See the LICENSE file.
