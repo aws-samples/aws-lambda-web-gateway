@@ -5,13 +5,8 @@ use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
 use aws_sdk_lambda::primitives::event_stream::EventReceiver;
-use futures::Stream;
-use std::pin::Pin;
-use std::task::{Context, Poll};
-use aws_sdk_lambda::error::SdkError;
+use aws_sdk_lambda::primitives::event_stream::EventStream;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamError;
-use tokio::sync::mpsc;
-use tokio_stream::wrappers::ReceiverStream;
 
 #[tokio::test]
 async fn test_health() {
