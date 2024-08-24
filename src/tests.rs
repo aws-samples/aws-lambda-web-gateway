@@ -58,27 +58,23 @@ async fn test_handle_buffered_response() {
 #[tokio::test]
 async fn test_detect_metadata() {
     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
+    let full_payload = payload.as_bytes().to_vec();
     let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(payload))
-            .build(),
-    );
-    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
-        aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(full_payload))
+            .payload(Blob::new(full_payload.clone()))
             .build(),
     );
     let event_stream = futures_util::stream::once(async { Ok(chunk) });
 
-    let mut resp = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
-        .event_stream(aws_sdk_lambda::event_stream::EventReceiver::new(Box::pin(event_stream)))
+    let mut resp = InvokeWithResponseStreamOutput::builder()
+        .event_stream(EventReceiver::new(Box::pin(event_stream)))
         .build()
         .unwrap();
 
     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
     assert!(has_metadata);
-    assert_eq!(first_chunk.unwrap(), payload.as_bytes());
+    assert_eq!(first_chunk.unwrap(), full_payload);
 }
 
 #[tokio::test]
