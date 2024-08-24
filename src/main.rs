@@ -47,7 +47,7 @@ async fn main() {
         .layer(TraceLayer::new_for_http())
         .with_state(app_state);
 
-    let addr = "0.0.0.0:8000";
+    let addr = &app_state.config.addr;
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();
     tracing::info!("Listening on {}", addr);
     axum::serve(listener, app).await.unwrap();

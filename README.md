@@ -37,6 +37,7 @@ auth_mode: "ApiKey"
 api_keys:
   - "key1"
   - "key2"
+addr: "0.0.0.0:8000"  # Optional, defaults to "0.0.0.0:8000"
 ```
 
 ## Building and Running

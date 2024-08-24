@@ -11,6 +11,7 @@ pub struct Config {
     pub lambda_invoke_mode: LambdaInvokeMode,
     pub api_keys: HashSet<String>,
     pub auth_mode: AuthMode,
+    pub addr: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -57,6 +58,15 @@ impl Config {
             .version("0.1.0")
             .author("Harold Sun <sunhua@amazon.com>")
             .about("A gateway to AWS Lambda functions")
+            .arg(
+                Arg::new("addr")
+                    .short('b')
+                    .long("bind-address")
+                    .value_name("ADDRESS")
+                    .help("Sets the bind address (default: 0.0.0.0:8000)")
+                    .required(false)
+                    .value_parser(value_parser!(String)),
+            )
             .arg(
                 Arg::new("lambda-function-name")
                     .short('f')
@@ -136,11 +146,17 @@ impl Config {
             _ => return Err("Invalid auth mode".into()),
         };
 
+        let addr = matches
+            .get_one::<String>("addr")
+            .cloned()
+            .unwrap_or_else(|| "0.0.0.0:8000".to_string());
+
         Ok(Config {
             lambda_function_name,
             lambda_invoke_mode,
             api_keys,
             auth_mode,
+            addr,
         })
     }
 }
