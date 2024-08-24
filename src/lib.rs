@@ -269,7 +269,7 @@ async fn handle_streaming_response(
             PayloadChunk(chunk) => {
                 if let Some(data) = chunk.payload() {
                     let bytes = data.clone().into_inner();
-                    Ok(Bytes::from(bytes))
+                    Ok::<_, std::convert::Infallible>(Bytes::from(bytes))
                 } else {
                     Ok(Bytes::default())
                 }
