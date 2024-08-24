@@ -62,18 +62,15 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let (tx, rx) = tokio::sync::mpsc::channel(1);
-    tx.send(Ok(chunk)).await.unwrap();
-    drop(tx);
-
-    let event_receiver = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
-        .event_stream(rx)
-        .build()
-        .unwrap()
-        .event_stream;
+    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
+        aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
+            .payload(Blob::new(payload))
+            .build(),
+    );
+    let event_stream = futures_util::stream::once(async { Ok(chunk) });
 
     let mut resp = aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(aws_sdk_lambda::event_stream::EventReceiver::new(Box::pin(event_stream)))
         .build()
         .unwrap();
 
