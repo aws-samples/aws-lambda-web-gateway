@@ -17,6 +17,11 @@ pub struct Config {
     pub addr: String,
 }
 
+#[cfg(test)]
+mod tests {
+    include!("config_tests.rs");
+}
+
 fn default_auth_mode() -> AuthMode {
     AuthMode::Open
 }
