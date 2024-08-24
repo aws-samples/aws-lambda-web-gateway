@@ -45,7 +45,7 @@ async fn main() {
         .route("/", any(handler))
         .route("/*path", any(handler))
         .layer(TraceLayer::new_for_http())
-        .with_state(app_state);
+        .with_state(app_state.clone());
 
     let addr = &app_state.config.addr;
     let listener = tokio::net::TcpListener::bind(addr).await.unwrap();

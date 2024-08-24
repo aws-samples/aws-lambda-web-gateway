@@ -19,29 +19,29 @@ fn default_auth_mode() -> AuthMode {
     AuthMode::Open
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum AuthMode {
     Open,
     ApiKey,
 }
 
-impl AuthMode {
-    pub fn from_str(s: &str) -> Self {
+impl FromStr for AuthMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_str() {
-            "open" => AuthMode::Open,
-            "apikey" => AuthMode::ApiKey,
-            _ => panic!("Invalid auth mode: {}", s),
+            "open" => Ok(AuthMode::Open),
+            "apikey" => Ok(AuthMode::ApiKey),
+            _ => Err(format!("Invalid auth mode: {}", s)),
         }
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LambdaInvokeMode {
     Buffered,
     ResponseStream,
 }
-
-use std::str::FromStr;
 
 impl FromStr for LambdaInvokeMode {
     type Err = String;
