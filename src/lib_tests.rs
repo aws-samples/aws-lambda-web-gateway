@@ -4,7 +4,7 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::InvokeWithResponseStreamOutput;
-use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use aws_sdk_lambda::primitives::event_stream::{EventReceiver, IntoEventStream};
 
 #[tokio::test]
 async fn test_health() {
@@ -64,6 +64,14 @@ struct MockEventReceiver {
     events: Vec<InvokeWithResponseStreamResponseEvent>,
 }
 
+impl IntoEventStream for MockEventReceiver {
+    type EventStream = Self;
+
+    fn into_event_stream(self) -> Self::EventStream {
+        self
+    }
+}
+
 impl Stream for MockEventReceiver {
     type Item = Result<InvokeWithResponseStreamResponseEvent, SdkError<InvokeWithResponseStreamError>>;
 
@@ -90,10 +98,10 @@ async fn test_detect_metadata() {
         events: vec![chunk],
     };
 
-    let mock_receiver = Box::pin(mock_receiver);
+    let event_receiver = EventReceiver::new(mock_receiver.into_event_stream());
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(mock_receiver)
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
@@ -123,10 +131,10 @@ async fn test_collect_metadata() {
         events: vec![chunk],
     };
 
-    let mock_receiver = Box::pin(mock_receiver);
+    let event_receiver = EventReceiver::new(mock_receiver.into_event_stream());
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(mock_receiver)
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
