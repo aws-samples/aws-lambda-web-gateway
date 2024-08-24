@@ -90,12 +90,10 @@ async fn test_detect_metadata() {
         events: vec![chunk],
     };
 
-    let event_receiver = EventReceiver {
-        inner: SmithyReceiver::new(Box::pin(mock_receiver)),
-    };
+    let mock_receiver = Box::pin(mock_receiver);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(mock_receiver)
         .build()
         .unwrap();
 
@@ -125,12 +123,10 @@ async fn test_collect_metadata() {
         events: vec![chunk],
     };
 
-    let event_receiver = EventReceiver {
-        inner: SmithyReceiver::new(Box::pin(mock_receiver)),
-    };
+    let mock_receiver = Box::pin(mock_receiver);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
+        .event_stream(mock_receiver)
         .build()
         .unwrap();
 
