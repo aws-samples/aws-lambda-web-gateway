@@ -63,10 +63,13 @@ async fn test_detect_metadata() {
             .payload(Blob::new(full_payload.clone()))
             .build(),
     );
-    let event_stream = MockEventStream::new(vec![Ok(chunk)]);
+    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    tx.send(Ok(chunk)).await.unwrap();
+    drop(tx);
 
+    let event_receiver = EventReceiver::new(rx);
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(Box::pin(event_stream))
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
@@ -91,12 +94,13 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let event_stream = MockEventStream {
-        events: vec![Ok(chunk)],
-    };
+    let (tx, rx) = tokio::sync::mpsc::channel(1);
+    tx.send(Ok(chunk)).await.unwrap();
+    drop(tx);
 
+    let event_receiver = EventReceiver::new(rx);
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(EventStream::new(Box::pin(event_stream)))
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
