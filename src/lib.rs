@@ -266,15 +266,17 @@ async fn handle_streaming_response(
 
     let stream = ReceiverStream::new(rx).map(|event_result| match event_result {
         Ok(event) => match event {
-        InvokeComplete(_) => Ok(Bytes::default()),
-        PayloadChunk(chunk) => match chunk.payload() {
-            Some(data) => {
-                let bytes = data.clone().into_inner();
-                Ok(Bytes::from(bytes))
-            }
-            None => Ok(Bytes::default()),
+            InvokeComplete(_) => Ok(Bytes::default()),
+            PayloadChunk(chunk) => match chunk.payload() {
+                Some(data) => {
+                    let bytes = data.clone().into_inner();
+                    Ok(Bytes::from(bytes))
+                }
+                None => Ok(Bytes::default()),
+            },
+            _ => Ok(Bytes::default()), // Handle other event types
         },
-        _ => Err("unknown events"),
+        Err(_) => Ok(Bytes::default()), // Handle error case
     });
 
     let mut resp_builder = Response::builder();
