@@ -4,9 +4,8 @@ use aws_smithy_types::Blob;
 use std::collections::HashMap;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent;
 use aws_sdk_lambda::operation::invoke_with_response_stream::{InvokeWithResponseStreamOutput, InvokeWithResponseStreamError};
-use aws_sdk_lambda::primitives::event_stream::Message;
-use futures::stream::{iter, Stream};
-use std::pin::Pin;
+use aws_sdk_lambda::primitives::event_stream::EventReceiver;
+use tokio::sync::mpsc;
 
 #[tokio::test]
 async fn test_health() {
@@ -64,10 +63,14 @@ async fn test_detect_metadata() {
             .payload(Blob::new(payload))
             .build(),
     );
-    let event_stream = Box::pin(iter(vec![Ok(chunk)])) as Pin<Box<dyn Stream<Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::error::SdkError<InvokeWithResponseStreamError>>>>>;
+    let (tx, rx) = mpsc::channel(1);
+    tx.send(Ok(chunk)).await.unwrap();
+    drop(tx);
+
+    let event_receiver = EventReceiver::new(rx);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_stream)
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
@@ -92,10 +95,14 @@ async fn test_collect_metadata() {
             .payload(Blob::new(full_payload))
             .build(),
     );
-    let event_stream = Box::pin(iter(vec![Ok(chunk)])) as Pin<Box<dyn Stream<Item = Result<InvokeWithResponseStreamResponseEvent, aws_sdk_lambda::error::SdkError<InvokeWithResponseStreamError>>>>>;
+    let (tx, rx) = mpsc::channel(1);
+    tx.send(Ok(chunk)).await.unwrap();
+    drop(tx);
+
+    let event_receiver = EventReceiver::new(rx);
 
     let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_stream)
+        .event_stream(event_receiver)
         .build()
         .unwrap();
 
