@@ -31,13 +31,10 @@ impl Default for Config {
 
 impl Config {
     pub fn load<P: AsRef<Path>>(path: P) -> Self {
-        let mut config = match Self::load_from_file(path) {
-            Ok(config) => config,
-            Err(e) => {
-                tracing::warn!("Failed to load config from file: {}. Using default values.", e);
-                Config::default()
-            }
-        };
+        let mut config = Self::load_from_file(path).unwrap_or_else(|e| {
+            tracing::warn!("Failed to load config from file: {}. Using default values.", e);
+            Config::default()
+        });
         config.apply_env_overrides();
         config
     }
