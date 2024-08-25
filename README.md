@@ -26,7 +26,7 @@ The gateway can be configured using a YAML file (`config.yaml`) or environment v
 - Lambda function name (required)
 - Lambda invoke mode (Buffered or ResponseStream, default: Buffered)
 - API keys (for API Key authentication mode)
-- Authentication mode (Open or ApiKey)
+- Authorization mode (Open or ApiKey, default: Open)
 - Bind address (default: "0.0.0.0:8000")
 
 Example `config.yaml`:
@@ -46,7 +46,7 @@ Alternatively, you can use environment variables:
 - `LAMBDA_FUNCTION_NAME`
 - `LAMBDA_INVOKE_MODE`
 - `API_KEYS` (comma-separated list)
-- `AUTH_MODE`
+- `AUTH_MODE` (default: Open)
 - `ADDR`
 
 Environment variables take precedence over the configuration file when both are present.
