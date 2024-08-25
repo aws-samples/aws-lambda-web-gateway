@@ -67,10 +67,22 @@ pub enum AuthMode {
     ApiKey,
 }
 
+impl Default for AuthMode {
+    fn default() -> Self {
+        AuthMode::Open
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum LambdaInvokeMode {
     Buffered,
     ResponseStream,
+}
+
+impl Default for LambdaInvokeMode {
+    fn default() -> Self {
+        LambdaInvokeMode::Buffered
+    }
 }
 
 impl FromStr for AuthMode {

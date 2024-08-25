@@ -5,7 +5,7 @@ mod tests {
     include!("lib_tests.rs");
 }
 
-use crate::config::{Config, AuthMode, LambdaInvokeMode};
+use crate::config::{Config, LambdaInvokeMode};
 use aws_config::BehaviorVersion;
 use aws_sdk_lambda::types::InvokeWithResponseStreamResponseEvent::{InvokeComplete, PayloadChunk};
 use aws_sdk_lambda::types::{InvokeResponseStreamUpdate, ResponseStreamingInvocationType};
