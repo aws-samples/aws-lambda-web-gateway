@@ -114,6 +114,11 @@ addr: 0.0.0.0:8000
     // Clean up environment variables
     env::remove_var("LAMBDA_FUNCTION_NAME");
     env::remove_var("AUTH_MODE");
+
+    // Test with no environment variables set
+    let config = Config::load(temp_file.path());
+    assert_eq!(config.lambda_function_name, "file-function");
+    assert_eq!(config.auth_mode, AuthMode::Open);
 }
 
 #[test]

@@ -39,6 +39,12 @@ impl Config {
             }
         };
         config.apply_env_overrides();
+        
+        // If lambda_function_name is still empty after applying env overrides, use a default value
+        if config.lambda_function_name.is_empty() {
+            config.lambda_function_name = "default-function".to_string();
+        }
+        
         config
     }
 
@@ -67,10 +73,6 @@ impl Config {
         }
         if let Ok(val) = std::env::var("ADDR") {
             self.addr = val;
-        }
-        // If lambda_function_name is still empty after applying env overrides, use a default value
-        if self.lambda_function_name.is_empty() {
-            self.lambda_function_name = "default-function".to_string();
         }
     }
 }
