@@ -1,12 +1,16 @@
-# function name or arn
+# Lambda function name or ARN (required)
 lambda_function_name: "my-lambda-function"
-# "ResponseStream" or "Buffered"
+
+# Lambda invoke mode: "ResponseStream" or "Buffered" (optional, defaults to "Buffered")
 lambda_invoke_mode: "ResponseStream"
-# Optional, defaults to "0.0.0.0:8000"
+
+# Server address (optional, defaults to "0.0.0.0:8000")
 addr: "0.0.0.0:8000"
-# "ApiKey" or "Open"
-auth_mode: ApiKey
-# change these keys
+
+# Authentication mode: "ApiKey" or "Open" (optional, defaults to "Open")
+auth_mode: "ApiKey"
+
+# API keys (required if auth_mode is "ApiKey", ignored if "Open")
 api_keys:
-  - "key1"                                                                                                                                                                                                                                                                                                                                               
+  - "key1"
   - "key2"
