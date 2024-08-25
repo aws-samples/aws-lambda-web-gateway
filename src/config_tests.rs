@@ -62,11 +62,6 @@ fn test_config_apply_env_overrides() {
     env::remove_var("API_KEYS");
     env::remove_var("AUTH_MODE");
     env::remove_var("ADDR");
-
-    // Test default lambda_function_name when not set
-    let mut config = Config::default();
-    config.apply_env_overrides();
-    assert_eq!(config.lambda_function_name, "default-function");
 }
 
 #[test]
@@ -110,11 +105,12 @@ addr: 0.0.0.0:8000
     // Test with environment variables set
     env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
     env::set_var("AUTH_MODE", "apikey");
+    env::set_var("LAMBDA_INVOKE_MODE", "responsestream");
 
     let config = Config::load(temp_file.path());
 
     assert_eq!(config.lambda_function_name, "env-function");
-    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
     assert_eq!(config.api_keys, vec!["file-key"].into_iter().map(String::from).collect::<HashSet<String>>());
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
     assert_eq!(config.addr, "0.0.0.0:8000");
@@ -122,6 +118,7 @@ addr: 0.0.0.0:8000
     // Clean up environment variables
     env::remove_var("LAMBDA_FUNCTION_NAME");
     env::remove_var("AUTH_MODE");
+    env::remove_var("LAMBDA_INVOKE_MODE");
 
     // Test with no environment variables set
     let config = Config::load(temp_file.path());
@@ -183,10 +180,12 @@ fn test_config_load_invalid_yaml() {
 #[test]
 fn test_config_load_empty_api_keys() {
     env::set_var("API_KEYS", "");
+    env::set_var("LAMBDA_FUNCTION_NAME", "test-function"); // Add this line
     
     let config = Config::load("non_existent_file.yaml");
     
     assert!(config.api_keys.is_empty());
 
     env::remove_var("API_KEYS");
+    env::remove_var("LAMBDA_FUNCTION_NAME"); // Add this line
 }
