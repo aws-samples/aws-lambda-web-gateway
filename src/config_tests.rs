@@ -33,6 +33,13 @@ fn test_config_default() {
 }
 
 #[test]
+#[should_panic(expected = "No lambda_function_name provided")]
+fn test_config_panic_on_empty_lambda_function_name() {
+    let mut config = Config::default();
+    config.apply_env_overrides();
+}
+
+#[test]
 fn test_config_apply_env_overrides() {
     env::set_var("LAMBDA_FUNCTION_NAME", "test-function");
     env::set_var("LAMBDA_INVOKE_MODE", "responsestream");
@@ -124,8 +131,7 @@ addr: 0.0.0.0:8000
 
     // Test with empty LAMBDA_FUNCTION_NAME
     env::set_var("LAMBDA_FUNCTION_NAME", "");
-    let config = Config::load(temp_file.path());
-    assert_eq!(config.lambda_function_name, "default-function");
+    assert!(std::panic::catch_unwind(|| Config::load(temp_file.path())).is_err());
     env::remove_var("LAMBDA_FUNCTION_NAME");
 }
 

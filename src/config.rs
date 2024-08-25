@@ -42,8 +42,9 @@ impl Config {
     fn apply_env_overrides(&mut self) {
         if let Ok(val) = std::env::var("LAMBDA_FUNCTION_NAME") {
             self.lambda_function_name = val;
-        } else if self.lambda_function_name.is_empty() {
-            self.lambda_function_name = "default-function".to_string();
+        }
+        if self.lambda_function_name.is_empty() {
+            panic!("No lambda_function_name provided. Please set it in the config file or LAMBDA_FUNCTION_NAME environment variable.");
         }
         if let Ok(val) = std::env::var("LAMBDA_INVOKE_MODE") {
             if let Ok(mode) = val.parse() {
