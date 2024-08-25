@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
-use serde_yaml;
 use std::collections::HashSet;
-use std::fs;
-use std::path::Path;
+use std::str::FromStr;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -42,20 +40,26 @@ pub enum LambdaInvokeMode {
     ResponseStream,
 }
 
-impl Config {
-    pub fn from_yaml_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let config_content = fs::read_to_string(path)?;
-        let config: Config = serde_yaml::from_str(&config_content)?;
-        
-        if config.lambda_function_name.is_empty() {
-            return Err("lambda_function_name is required in the config file".into());
-        }
-        
-        Ok(config)
-    }
+impl FromStr for AuthMode {
+    type Err = String;
 
-    pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
-        let config_path = std::path::PathBuf::from("config.yaml");
-        Self::from_yaml_file(&config_path)
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "open" => Ok(AuthMode::Open),
+            "apikey" => Ok(AuthMode::ApiKey),
+            _ => Err(format!("Invalid AuthMode: {}", s)),
+        }
+    }
+}
+
+impl FromStr for LambdaInvokeMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "buffered" => Ok(LambdaInvokeMode::Buffered),
+            "responsestream" => Ok(LambdaInvokeMode::ResponseStream),
+            _ => Err(format!("Invalid LambdaInvokeMode: {}", s)),
+        }
     }
 }
