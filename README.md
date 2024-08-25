@@ -11,7 +11,7 @@ A high-performance web gateway for AWS Lambda functions, written in Rust.
 - Automatic handling of base64 encoding/decoding for request/response bodies
 - Built with Rust and Axum for high performance and reliability
 - Health check endpoint for monitoring
-- Flexible configuration via YAML file or command-line arguments
+- Flexible configuration via YAML file or environment variables
 
 ## Prerequisites
 
