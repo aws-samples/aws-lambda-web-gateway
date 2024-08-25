@@ -1,7 +1,9 @@
 pub mod config;
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    include!("lib_tests.rs");
+}
 
 use crate::config::{Config, LambdaInvokeMode};
 use aws_config::BehaviorVersion;

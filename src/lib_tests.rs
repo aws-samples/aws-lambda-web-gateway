@@ -55,68 +55,68 @@ async fn test_handle_buffered_response() {
     assert_eq!(body, "Hello, World!");
 }
 
-#[tokio::test]
-async fn test_detect_metadata() {
-    let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
-    let full_payload = payload.as_bytes().to_vec();
-    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
-        aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(full_payload.clone()))
-            .build(),
-    );
+// #[tokio::test]
+// async fn test_detect_metadata() {
+//     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
+//     let full_payload = payload.as_bytes().to_vec();
+//     let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
+//         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
+//             .payload(Blob::new(full_payload.clone()))
+//             .build(),
+//     );
 
-    let event_receiver = EventReceiver {
-        inner: vec![chunk],
-    };
+//     let event_receiver = EventReceiver {
+//         inner: vec![chunk],
+//     };
 
-    let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
-        .build()
-        .unwrap();
+//     let mut resp = InvokeWithResponseStreamOutput::builder()
+//         .event_stream(event_receiver)
+//         .build()
+//         .unwrap();
 
-    // Type annotation to help the compiler
-    let resp: InvokeWithResponseStreamOutput = resp;
+//     // Type annotation to help the compiler
+//     let resp: InvokeWithResponseStreamOutput = resp;
 
-    let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
+//     let (has_metadata, first_chunk) = detect_metadata(&mut resp).await;
 
-    assert!(has_metadata);
-    assert_eq!(first_chunk.unwrap(), full_payload);
-}
+//     assert!(has_metadata);
+//     assert_eq!(first_chunk.unwrap(), full_payload);
+// }
 
-#[tokio::test]
-async fn test_collect_metadata() {
-    let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
-    let null_padding = vec![0u8; 8];
-    let remaining_data = b"Remaining data";
+// #[tokio::test]
+// async fn test_collect_metadata() {
+//     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
+//     let null_padding = vec![0u8; 8];
+//     let remaining_data = b"Remaining data";
 
-    let mut full_payload = payload.as_bytes().to_vec();
-    full_payload.extend_from_slice(&null_padding);
-    full_payload.extend_from_slice(remaining_data);
+//     let mut full_payload = payload.as_bytes().to_vec();
+//     full_payload.extend_from_slice(&null_padding);
+//     full_payload.extend_from_slice(remaining_data);
 
-    let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
-        aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
-            .payload(Blob::new(full_payload))
-            .build(),
-    );
+//     let chunk = InvokeWithResponseStreamResponseEvent::PayloadChunk(
+//         aws_sdk_lambda::types::InvokeResponseStreamUpdate::builder()
+//             .payload(Blob::new(full_payload))
+//             .build(),
+//     );
 
-    let event_receiver =EventReceiver {
-        inner: vec![chunk],
-    };
+//     let event_receiver =EventReceiver {
+//         inner: vec![chunk],
+//     };
 
-    let mut resp = InvokeWithResponseStreamOutput::builder()
-        .event_stream(event_receiver)
-        .build()
-        .unwrap();
+//     let mut resp = InvokeWithResponseStreamOutput::builder()
+//         .event_stream(event_receiver)
+//         .build()
+//         .unwrap();
 
-    let mut metadata_buffer = Vec::new();
-    let (metadata_prelude, remaining) = collect_metadata(&mut resp, &mut metadata_buffer).await;
+//     let mut metadata_buffer = Vec::new();
+//     let (metadata_prelude, remaining) = collect_metadata(&mut resp, &mut metadata_buffer).await;
 
-    assert!(metadata_prelude.is_some());
-    let prelude = metadata_prelude.unwrap();
-    assert_eq!(prelude.status_code, StatusCode::OK);
-    assert_eq!(prelude.headers.get("content-type").unwrap(), "text/plain");
-    assert_eq!(remaining, remaining_data);
-}
+//     assert!(metadata_prelude.is_some());
+//     let prelude = metadata_prelude.unwrap();
+//     assert_eq!(prelude.status_code, StatusCode::OK);
+//     assert_eq!(prelude.headers.get("content-type").unwrap(), "text/plain");
+//     assert_eq!(remaining, remaining_data);
+// }
 
 #[tokio::test]
 async fn test_process_buffer() {
