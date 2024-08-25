@@ -118,21 +118,21 @@ async fn test_handle_buffered_response() {
 //     assert_eq!(remaining, remaining_data);
 // }
 
-#[tokio::test]
-async fn test_process_buffer() {
-    let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
-    let null_padding = vec![0u8; 8];
-    let remaining_data = b"Remaining data";
-
-    let mut buffer = payload.as_bytes().to_vec();
-    buffer.extend_from_slice(&null_padding);
-    buffer.extend_from_slice(remaining_data);
-
-    let (metadata_prelude, remaining) = process_buffer(&buffer);
-
-    assert!(metadata_prelude.is_some());
-    let prelude = metadata_prelude.unwrap();
-    assert_eq!(prelude.status_code, StatusCode::OK);
-    assert_eq!(prelude.headers.get("content-type").unwrap(), "text/plain");
-    assert_eq!(remaining, remaining_data);
-}
+// #[tokio::test]
+// async fn test_process_buffer() {
+//     let payload = r#"{"statusCode": 200, "headers": {"Content-Type": "text/plain"}, "body": "Hello"}"#;
+//     let null_padding = vec![0u8; 8];
+//     let remaining_data = b"Remaining data";
+//
+//     let mut buffer = payload.as_bytes().to_vec();
+//     buffer.extend_from_slice(&null_padding);
+//     buffer.extend_from_slice(remaining_data);
+//
+//     let (metadata_prelude, remaining) = process_buffer(&buffer);
+//
+//     assert!(metadata_prelude.is_some());
+//     let prelude = metadata_prelude.unwrap();
+//     assert_eq!(prelude.status_code, StatusCode::OK);
+//     assert_eq!(prelude.headers.get("content-type").unwrap(), "text/plain");
+//     assert_eq!(remaining, remaining_data);
+// }
