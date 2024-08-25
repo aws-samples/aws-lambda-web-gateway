@@ -1,6 +1,8 @@
 use super::*;
 use std::collections::HashSet;
 use std::env;
+use tempfile::NamedTempFile;
+use std::io::Write;
 
 #[test]
 fn test_auth_mode_from_str() {
@@ -57,9 +59,6 @@ fn test_config_apply_env_overrides() {
 
 #[test]
 fn test_config_load() {
-    use std::fs;
-    use std::io::Write;
-
     let config_content = r#"
 lambda_function_name: test-function
 lambda_invoke_mode: responsestream
@@ -70,16 +69,60 @@ auth_mode: apikey
 addr: 127.0.0.1:3000
 "#;
 
-    let temp_dir = tempfile::tempdir().unwrap();
-    let config_path = temp_dir.path().join("test_config.yaml");
-    let mut file = fs::File::create(&config_path).unwrap();
-    file.write_all(config_content.as_bytes()).unwrap();
+    let mut temp_file = NamedTempFile::new().unwrap();
+    write!(temp_file, "{}", config_content).unwrap();
 
-    let config = Config::load(&config_path).unwrap();
+    let config = Config::load(temp_file.path()).unwrap();
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
     assert_eq!(config.api_keys, vec!["key1", "key2"].into_iter().collect::<HashSet<String>>());
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
     assert_eq!(config.addr, "127.0.0.1:3000");
+}
+
+#[test]
+fn test_config_load_with_env_override() {
+    let config_content = r#"
+lambda_function_name: file-function
+lambda_invoke_mode: buffered
+api_keys:
+  - file-key
+auth_mode: open
+addr: 0.0.0.0:8000
+"#;
+
+    let mut temp_file = NamedTempFile::new().unwrap();
+    write!(temp_file, "{}", config_content).unwrap();
+
+    env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
+    env::set_var("AUTH_MODE", "apikey");
+
+    let config = Config::load(temp_file.path()).unwrap();
+
+    assert_eq!(config.lambda_function_name, "env-function");
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
+    assert_eq!(config.api_keys, vec!["file-key"].into_iter().collect::<HashSet<String>>());
+    assert_eq!(config.auth_mode, AuthMode::ApiKey);
+    assert_eq!(config.addr, "0.0.0.0:8000");
+
+    env::remove_var("LAMBDA_FUNCTION_NAME");
+    env::remove_var("AUTH_MODE");
+}
+
+#[test]
+fn test_config_load_invalid_file() {
+    let result = Config::load("non_existent_file.yaml");
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_config_load_invalid_yaml() {
+    let config_content = "invalid: yaml: content";
+
+    let mut temp_file = NamedTempFile::new().unwrap();
+    write!(temp_file, "{}", config_content).unwrap();
+
+    let result = Config::load(temp_file.path());
+    assert!(result.is_err());
 }
