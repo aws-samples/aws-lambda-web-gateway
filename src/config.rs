@@ -21,11 +21,11 @@ impl Config {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let contents = fs::read_to_string(path)?;
         let mut config: Config = serde_yaml::from_str(&contents)?;
-        config.override_from_env();
+        config.apply_env_overrides();
         Ok(config)
     }
 
-    fn override_from_env(&mut self) {
+    fn apply_env_overrides(&mut self) {
         if let Ok(val) = std::env::var("LAMBDA_FUNCTION_NAME") {
             self.lambda_function_name = val;
         }
