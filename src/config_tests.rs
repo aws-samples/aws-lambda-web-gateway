@@ -61,7 +61,7 @@ fn test_config_apply_env_overrides() {
 fn test_config_load() {
     let config_content = r#"
 lambda_function_name: test-function
-lambda_invoke_mode: responsestream
+lambda_invoke_mode: ResponseStream
 api_keys:
   - key1
   - key2
@@ -85,7 +85,7 @@ addr: 127.0.0.1:3000
 fn test_config_load_with_env_override() {
     let config_content = r#"
 lambda_function_name: file-function
-lambda_invoke_mode: buffered
+lambda_invoke_mode: Buffered
 api_keys:
   - file-key
 auth_mode: open
