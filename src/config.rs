@@ -31,9 +31,14 @@ impl Default for Config {
 
 impl Config {
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let contents = fs::read_to_string(path)?;
-        let mut config: Config = serde_yaml::from_str(&contents)?;
+        let mut config = Self::load_from_file(path)?;
         config.apply_env_overrides();
+        Ok(config)
+    }
+
+    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+        let contents = fs::read_to_string(path)?;
+        let config: Config = serde_yaml::from_str(&contents)?;
         Ok(config)
     }
 

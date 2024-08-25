@@ -59,13 +59,6 @@ fn test_config_apply_env_overrides() {
 
 #[test]
 fn test_config_load() {
-    // Clear any existing environment variables that might affect the test
-    env::remove_var("LAMBDA_FUNCTION_NAME");
-    env::remove_var("LAMBDA_INVOKE_MODE");
-    env::remove_var("API_KEYS");
-    env::remove_var("AUTH_MODE");
-    env::remove_var("ADDR");
-
     let config_content = r#"
 lambda_function_name: test-function
 lambda_invoke_mode: ResponseStream
@@ -79,7 +72,7 @@ addr: 127.0.0.1:3000
     let mut temp_file = NamedTempFile::new().unwrap();
     write!(temp_file, "{}", config_content).unwrap();
 
-    let config = Config::load(temp_file.path()).unwrap();
+    let config = Config::load_from_file(temp_file.path()).unwrap();
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
