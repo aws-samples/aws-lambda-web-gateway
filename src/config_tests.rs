@@ -119,6 +119,7 @@ addr: 0.0.0.0:8000
     let config = Config::load(temp_file.path());
     assert_eq!(config.lambda_function_name, "file-function");
     assert_eq!(config.auth_mode, AuthMode::Open);
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
 }
 
 #[test]
