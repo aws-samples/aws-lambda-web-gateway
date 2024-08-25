@@ -114,9 +114,6 @@ addr: 0.0.0.0:8000
     // Clean up environment variables
     env::remove_var("LAMBDA_FUNCTION_NAME");
     env::remove_var("AUTH_MODE");
-
-    env::remove_var("LAMBDA_FUNCTION_NAME");
-    env::remove_var("AUTH_MODE");
 }
 
 #[test]
