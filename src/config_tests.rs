@@ -100,6 +100,7 @@ addr: 0.0.0.0:8000
     let mut temp_file = NamedTempFile::new().unwrap();
     write!(temp_file, "{}", config_content).unwrap();
 
+    // Test with environment variables set
     env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
     env::set_var("AUTH_MODE", "apikey");
 
@@ -120,6 +121,12 @@ addr: 0.0.0.0:8000
     assert_eq!(config.lambda_function_name, "file-function");
     assert_eq!(config.auth_mode, AuthMode::Open);
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
+
+    // Test with empty LAMBDA_FUNCTION_NAME
+    env::set_var("LAMBDA_FUNCTION_NAME", "");
+    let config = Config::load(temp_file.path());
+    assert_eq!(config.lambda_function_name, "default-function");
+    env::remove_var("LAMBDA_FUNCTION_NAME");
 }
 
 #[test]
