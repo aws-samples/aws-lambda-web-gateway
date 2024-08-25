@@ -45,7 +45,7 @@ fn test_config_apply_env_overrides() {
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
-    assert_eq!(config.api_keys, vec!["key1", "key2"].into_iter().collect::<HashSet<String>>());
+    assert_eq!(config.api_keys, vec!["key1", "key2"].into_iter().map(String::from).collect::<HashSet<String>>());
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
     assert_eq!(config.addr, "127.0.0.1:3000");
 
@@ -76,7 +76,7 @@ addr: 127.0.0.1:3000
 
     assert_eq!(config.lambda_function_name, "test-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
-    assert_eq!(config.api_keys, vec!["key1", "key2"].into_iter().collect::<HashSet<String>>());
+    assert_eq!(config.api_keys, vec!["key1", "key2"].into_iter().map(String::from).collect::<HashSet<String>>());
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
     assert_eq!(config.addr, "127.0.0.1:3000");
 }
@@ -102,7 +102,7 @@ addr: 0.0.0.0:8000
 
     assert_eq!(config.lambda_function_name, "env-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
-    assert_eq!(config.api_keys, vec!["file-key"].into_iter().collect::<HashSet<String>>());
+    assert_eq!(config.api_keys, vec!["file-key"].into_iter().map(String::from).collect::<HashSet<String>>());
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
     assert_eq!(config.addr, "0.0.0.0:8000");
 
