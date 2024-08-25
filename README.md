@@ -21,7 +21,7 @@ A high-performance web gateway for AWS Lambda functions, written in Rust.
 
 ## Configuration
 
-The gateway can be configured using a YAML file (`config.yaml`), environment variables, or command-line arguments. Configuration options include:
+The gateway can be configured using a YAML file (`config.yaml`) or environment variables. Configuration options include:
 
 - Lambda function name (required)
 - Lambda invoke mode (Buffered or ResponseStream, default: Buffered)
@@ -32,16 +32,16 @@ The gateway can be configured using a YAML file (`config.yaml`), environment var
 Example `config.yaml`:
 
 ```yaml
-lambda_function_name: "my-lambda-function"  # Required
-lambda_invoke_mode: "ResponseStream"  # Optional, defaults to "Buffered"
+lambda_function_name: "my-lambda-function"
+lambda_invoke_mode: "ResponseStream"
 auth_mode: "ApiKey"
 api_keys:
   - "key1"
   - "key2"
-addr: "0.0.0.0:8000"  # Optional, defaults to "0.0.0.0:8000"
+addr: "0.0.0.0:8000"
 ```
 
-Environment variables can be used to override configuration file settings:
+Alternatively, you can use environment variables:
 
 - `LAMBDA_FUNCTION_NAME`
 - `LAMBDA_INVOKE_MODE`
@@ -49,7 +49,7 @@ Environment variables can be used to override configuration file settings:
 - `AUTH_MODE`
 - `ADDR`
 
-Note: When using the `Config::load()` method, both the configuration file and environment variables are considered, with environment variables taking precedence. If you want to load configuration only from a file without applying environment overrides, use the `Config::load_from_file()` method instead.
+Environment variables take precedence over the configuration file when both are present.
 
 ## Building and Running
 
@@ -64,14 +64,11 @@ Note: When using the `Config::load()` method, both the configuration file and en
    cargo build --release
    ```
 
-3. Run the gateway:
+3. Create a `config.yaml` file in the project root or set the necessary environment variables.
+
+4. Run the gateway:
    ```
    ./target/release/lambda-web-gateway
-   ```
-
-   Or with command-line arguments:
-   ```
-   ./target/release/lambda-web-gateway --lambda-function-name my-function --lambda-invoke-mode ResponseStream --auth-mode ApiKey --api-keys key1,key2 --bind-address 127.0.0.1:3000
    ```
 
 ## Usage
