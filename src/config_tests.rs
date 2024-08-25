@@ -59,6 +59,13 @@ fn test_config_apply_env_overrides() {
 
 #[test]
 fn test_config_load() {
+    // Clear any existing environment variables that might affect the test
+    env::remove_var("LAMBDA_FUNCTION_NAME");
+    env::remove_var("LAMBDA_INVOKE_MODE");
+    env::remove_var("API_KEYS");
+    env::remove_var("AUTH_MODE");
+    env::remove_var("ADDR");
+
     let config_content = r#"
 lambda_function_name: test-function
 lambda_invoke_mode: ResponseStream
