@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::fs;
 use std::path::Path;
 
-#[derive(Clone, Debug, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub lambda_function_name: String,
     #[serde(default = "default_lambda_invoke_mode")]
@@ -13,8 +13,20 @@ pub struct Config {
     pub api_keys: HashSet<String>,
     #[serde(default = "default_auth_mode")]
     pub auth_mode: AuthMode,
-    #[serde(default)]
+    #[serde(default = "default_addr")]
     pub addr: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            lambda_function_name: String::new(),
+            lambda_invoke_mode: default_lambda_invoke_mode(),
+            api_keys: HashSet::new(),
+            auth_mode: default_auth_mode(),
+            addr: default_addr(),
+        }
+    }
 }
 
 impl Config {
@@ -59,6 +71,10 @@ fn default_auth_mode() -> AuthMode {
 
 fn default_lambda_invoke_mode() -> LambdaInvokeMode {
     LambdaInvokeMode::Buffered
+}
+
+fn default_addr() -> String {
+    "0.0.0.0:8000".to_string()
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
