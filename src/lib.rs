@@ -39,7 +39,7 @@ pub struct ApplicationState {
 pub async fn run_app() {
     tracing_subscriber::fmt::init();
 
-    let config = Config::load_from_file_and_env("config.yaml")
+    let config = Config::load("config.yaml")
         .unwrap_or_else(|_| {
             tracing::warn!("Failed to load config from file, using default values");
             Config::default()

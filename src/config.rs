@@ -18,7 +18,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn load_from_file_and_env<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let contents = fs::read_to_string(path)?;
         let mut config: Config = serde_yaml::from_str(&contents)?;
         config.apply_env_overrides();
