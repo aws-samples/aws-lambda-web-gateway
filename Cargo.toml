@@ -29,6 +29,9 @@ tokio-stream = "0.1.15"
 futures-util = "0.3.30"
 http-serde = "2.1.0"
 
+[dev-dependencies]
+tempfile = "3.8.1"
+
 [[bin]]
 name = "lambda-web-gateway"
 path = "src/main.rs"
