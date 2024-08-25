@@ -39,20 +39,11 @@ pub struct ApplicationState {
 pub async fn run_app() {
     tracing_subscriber::fmt::init();
 
-    let config = Config {
-        lambda_function_name: std::env::var("LAMBDA_FUNCTION_NAME")
-            .expect("LAMBDA_FUNCTION_NAME must be set"),
-        lambda_invoke_mode: std::env::var("LAMBDA_INVOKE_MODE")
-            .map(|s| s.parse().expect("Invalid LAMBDA_INVOKE_MODE"))
-            .unwrap_or_else(|_| LambdaInvokeMode::Buffered),
-        api_keys: std::env::var("API_KEYS")
-            .map(|s| s.split(',').map(String::from).collect())
-            .unwrap_or_default(),
-        auth_mode: std::env::var("AUTH_MODE")
-            .map(|s| s.parse().expect("Invalid AUTH_MODE"))
-            .unwrap_or_else(|_| AuthMode::Open),
-        addr: std::env::var("ADDR").unwrap_or_else(|_| "127.0.0.1:3000".to_string()),
-    };
+    let config = Config::from_file("config.yaml")
+        .unwrap_or_else(|_| {
+            tracing::warn!("Failed to load config from file, using default values");
+            Config::default()
+        });
     let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = Client::new(&aws_config);
 
