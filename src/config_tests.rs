@@ -65,7 +65,7 @@ lambda_invoke_mode: ResponseStream
 api_keys:
   - key1
   - key2
-auth_mode: apikey
+auth_mode: ApiKey
 addr: 127.0.0.1:3000
 "#;
 
@@ -88,7 +88,7 @@ lambda_function_name: file-function
 lambda_invoke_mode: Buffered
 api_keys:
   - file-key
-auth_mode: open
+auth_mode: Open
 addr: 0.0.0.0:8000
 "#;
 
