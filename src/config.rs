@@ -30,10 +30,19 @@ impl Default for Config {
 }
 
 impl Config {
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut config = Self::load_from_file(path)?;
-        config.apply_env_overrides();
-        Ok(config)
+    pub fn load<P: AsRef<Path>>(path: P) -> Self {
+        match Self::load_from_file(path) {
+            Ok(mut config) => {
+                config.apply_env_overrides();
+                config
+            }
+            Err(e) => {
+                tracing::warn!("Failed to load config from file: {}. Using environment variables.", e);
+                let mut config = Config::default();
+                config.apply_env_overrides();
+                config
+            }
+        }
     }
 
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
@@ -52,7 +61,7 @@ impl Config {
             }
         }
         if let Ok(val) = std::env::var("API_KEYS") {
-            self.api_keys = val.split(',').map(String::from).collect();
+            self.api_keys = val.split(',').filter(|s| !s.is_empty()).map(String::from).collect();
         }
         if let Ok(val) = std::env::var("AUTH_MODE") {
             if let Ok(mode) = val.parse() {

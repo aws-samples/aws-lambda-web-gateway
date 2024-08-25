@@ -112,8 +112,19 @@ addr: 0.0.0.0:8000
 
 #[test]
 fn test_config_load_invalid_file() {
-    let result = Config::load("non_existent_file.yaml");
-    assert!(result.is_err());
+    env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
+    env::set_var("AUTH_MODE", "apikey");
+
+    let config = Config::load("non_existent_file.yaml");
+    
+    assert_eq!(config.lambda_function_name, "env-function");
+    assert_eq!(config.auth_mode, AuthMode::ApiKey);
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered); // Default value
+    assert!(config.api_keys.is_empty()); // Default value
+    assert_eq!(config.addr, "0.0.0.0:8000"); // Default value
+
+    env::remove_var("LAMBDA_FUNCTION_NAME");
+    env::remove_var("AUTH_MODE");
 }
 
 #[test]
@@ -123,6 +134,28 @@ fn test_config_load_invalid_yaml() {
     let mut temp_file = NamedTempFile::new().unwrap();
     write!(temp_file, "{}", config_content).unwrap();
 
-    let result = Config::load(temp_file.path());
-    assert!(result.is_err());
+    env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
+    env::set_var("AUTH_MODE", "apikey");
+
+    let config = Config::load(temp_file.path());
+
+    assert_eq!(config.lambda_function_name, "env-function");
+    assert_eq!(config.auth_mode, AuthMode::ApiKey);
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered); // Default value
+    assert!(config.api_keys.is_empty()); // Default value
+    assert_eq!(config.addr, "0.0.0.0:8000"); // Default value
+
+    env::remove_var("LAMBDA_FUNCTION_NAME");
+    env::remove_var("AUTH_MODE");
+}
+
+#[test]
+fn test_config_load_empty_api_keys() {
+    env::set_var("API_KEYS", "");
+    
+    let config = Config::load("non_existent_file.yaml");
+    
+    assert!(config.api_keys.is_empty());
+
+    env::remove_var("API_KEYS");
 }
