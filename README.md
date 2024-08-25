@@ -21,12 +21,13 @@ A high-performance web gateway for AWS Lambda functions, written in Rust.
 
 ## Configuration
 
-The gateway can be configured using either a YAML file (`config.yaml`) or command-line arguments. Configuration options include:
+The gateway can be configured using a YAML file (`config.yaml`), environment variables, or command-line arguments. Configuration options include:
 
 - Lambda function name (required)
 - Lambda invoke mode (Buffered or ResponseStream, default: Buffered)
 - API keys (for API Key authentication mode)
 - Authentication mode (Open or ApiKey)
+- Bind address (default: "0.0.0.0:8000")
 
 Example `config.yaml`:
 
@@ -39,6 +40,16 @@ api_keys:
   - "key2"
 addr: "0.0.0.0:8000"  # Optional, defaults to "0.0.0.0:8000"
 ```
+
+Environment variables can be used to override configuration file settings:
+
+- `LAMBDA_FUNCTION_NAME`
+- `LAMBDA_INVOKE_MODE`
+- `API_KEYS` (comma-separated list)
+- `AUTH_MODE`
+- `ADDR`
+
+Note: When using the `Config::load()` method, both the configuration file and environment variables are considered, with environment variables taking precedence. If you want to load configuration only from a file without applying environment overrides, use the `Config::load_from_file()` method instead.
 
 ## Building and Running
 
