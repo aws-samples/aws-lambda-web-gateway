@@ -45,6 +45,28 @@ impl Config {
         config
     }
 
+    fn apply_env_overrides(&mut self) {
+        if let Ok(val) = std::env::var("LAMBDA_FUNCTION_NAME") {
+            self.lambda_function_name = val;
+        }
+        if let Ok(val) = std::env::var("LAMBDA_INVOKE_MODE") {
+            if let Ok(mode) = val.parse() {
+                self.lambda_invoke_mode = mode;
+            }
+        }
+        if let Ok(val) = std::env::var("API_KEYS") {
+            self.api_keys = val.split(',').filter(|s| !s.is_empty()).map(String::from).collect();
+        }
+        if let Ok(val) = std::env::var("AUTH_MODE") {
+            if let Ok(mode) = val.parse() {
+                self.auth_mode = mode;
+            }
+        }
+        if let Ok(val) = std::env::var("ADDR") {
+            self.addr = val;
+        }
+    }
+
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
         let contents = fs::read_to_string(path)?;
         let config: Config = serde_yaml::from_str(&contents)?;
