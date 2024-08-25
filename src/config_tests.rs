@@ -55,6 +55,11 @@ fn test_config_apply_env_overrides() {
     env::remove_var("API_KEYS");
     env::remove_var("AUTH_MODE");
     env::remove_var("ADDR");
+
+    // Test default lambda_function_name when not set
+    let mut config = Config::default();
+    config.apply_env_overrides();
+    assert_eq!(config.lambda_function_name, "default-function");
 }
 
 #[test]
@@ -118,21 +123,20 @@ addr: 0.0.0.0:8000
 fn test_config_load_invalid_file() {
     env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
     env::set_var("AUTH_MODE", "apikey");
+    env::set_var("LAMBDA_INVOKE_MODE", "responsestream");
 
     let config = Config::load("non_existent_file.yaml");
     
     assert_eq!(config.lambda_function_name, "env-function");
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
-    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
     assert!(config.api_keys.is_empty());
     assert_eq!(config.addr, "0.0.0.0:8000");
 
     // Clean up environment variables
     env::remove_var("LAMBDA_FUNCTION_NAME");
     env::remove_var("AUTH_MODE");
-
-    env::remove_var("LAMBDA_FUNCTION_NAME");
-    env::remove_var("AUTH_MODE");
+    env::remove_var("LAMBDA_INVOKE_MODE");
 }
 
 #[test]
@@ -144,17 +148,20 @@ fn test_config_load_invalid_yaml() {
 
     env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
     env::set_var("AUTH_MODE", "apikey");
+    env::set_var("LAMBDA_INVOKE_MODE", "responsestream");
 
     let config = Config::load(temp_file.path());
 
     assert_eq!(config.lambda_function_name, "env-function");
     assert_eq!(config.auth_mode, AuthMode::ApiKey);
-    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered); // Default value
-    assert!(config.api_keys.is_empty()); // Default value
-    assert_eq!(config.addr, "0.0.0.0:8000"); // Default value
+    assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::ResponseStream);
+    assert!(config.api_keys.is_empty());
+    assert_eq!(config.addr, "0.0.0.0:8000");
 
+    // Clean up environment variables
     env::remove_var("LAMBDA_FUNCTION_NAME");
     env::remove_var("AUTH_MODE");
+    env::remove_var("LAMBDA_INVOKE_MODE");
 }
 
 #[test]

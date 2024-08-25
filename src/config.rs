@@ -31,18 +31,15 @@ impl Default for Config {
 
 impl Config {
     pub fn load<P: AsRef<Path>>(path: P) -> Self {
-        match Self::load_from_file(path) {
-            Ok(mut config) => {
-                config.apply_env_overrides();
-                config
-            }
+        let mut config = match Self::load_from_file(path) {
+            Ok(config) => config,
             Err(e) => {
-                tracing::warn!("Failed to load config from file: {}. Using environment variables.", e);
-                let mut config = Config::default();
-                config.apply_env_overrides();
-                config
+                tracing::warn!("Failed to load config from file: {}. Using default values.", e);
+                Config::default()
             }
-        }
+        };
+        config.apply_env_overrides();
+        config
     }
 
     pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, Box<dyn std::error::Error>> {
@@ -70,6 +67,10 @@ impl Config {
         }
         if let Ok(val) = std::env::var("ADDR") {
             self.addr = val;
+        }
+        // If lambda_function_name is still empty after applying env overrides, use a default value
+        if self.lambda_function_name.is_empty() {
+            self.lambda_function_name = "default-function".to_string();
         }
     }
 }
