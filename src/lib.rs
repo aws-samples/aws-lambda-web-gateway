@@ -39,11 +39,7 @@ pub struct ApplicationState {
 pub async fn run_app() {
     tracing_subscriber::fmt::init();
 
-    let config = Config::load("config.yaml")
-        .unwrap_or_else(|_| {
-            tracing::warn!("Failed to load config from file, using default values");
-            Config::default()
-        });
+    let config = Config::load("config.yaml");
     let aws_config = aws_config::load_defaults(BehaviorVersion::latest()).await;
     let client = Client::new(&aws_config);
 

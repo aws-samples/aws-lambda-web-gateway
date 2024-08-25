@@ -98,7 +98,7 @@ addr: 0.0.0.0:8000
     env::set_var("LAMBDA_FUNCTION_NAME", "env-function");
     env::set_var("AUTH_MODE", "apikey");
 
-    let config = Config::load(temp_file.path()).unwrap();
+    let config = Config::load(temp_file.path());
 
     assert_eq!(config.lambda_function_name, "env-function");
     assert_eq!(config.lambda_invoke_mode, LambdaInvokeMode::Buffered);
