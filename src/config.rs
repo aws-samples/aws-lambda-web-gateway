@@ -1,17 +1,14 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
-use std::str::FromStr;
-use std::fs;
-use std::path::Path;
+use std::{collections::HashSet, env, fs, path::Path, str::FromStr};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Config {
     pub lambda_function_name: String,
-    #[serde(default = "default_lambda_invoke_mode")]
+    #[serde(default)]
     pub lambda_invoke_mode: LambdaInvokeMode,
     #[serde(default)]
     pub api_keys: HashSet<String>,
-    #[serde(default = "default_auth_mode")]
+    #[serde(default)]
     pub auth_mode: AuthMode,
     #[serde(default = "default_addr")]
     pub addr: String,
@@ -21,9 +18,9 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             lambda_function_name: String::new(),
-            lambda_invoke_mode: default_lambda_invoke_mode(),
+            lambda_invoke_mode: Default::default(),
             api_keys: HashSet::new(),
-            auth_mode: default_auth_mode(),
+            auth_mode: Default::default(),
             addr: default_addr(),
         }
     }
@@ -40,26 +37,26 @@ impl Config {
     }
 
     fn apply_env_overrides(&mut self) {
-        if let Ok(val) = std::env::var("LAMBDA_FUNCTION_NAME") {
+        if let Ok(val) = env::var("LAMBDA_FUNCTION_NAME") {
             self.lambda_function_name = val;
         }
         if self.lambda_function_name.is_empty() {
             panic!("No lambda_function_name provided. Please set it in the config file or LAMBDA_FUNCTION_NAME environment variable.");
         }
-        if let Ok(val) = std::env::var("LAMBDA_INVOKE_MODE") {
+        if let Ok(val) = env::var("LAMBDA_INVOKE_MODE") {
             if let Ok(mode) = val.parse() {
                 self.lambda_invoke_mode = mode;
             }
         }
-        if let Ok(val) = std::env::var("API_KEYS") {
+        if let Ok(val) = env::var("API_KEYS") {
             self.api_keys = val.split(',').filter(|s| !s.is_empty()).map(String::from).collect();
         }
-        if let Ok(val) = std::env::var("AUTH_MODE") {
+        if let Ok(val) = env::var("AUTH_MODE") {
             if let Ok(mode) = val.parse() {
                 self.auth_mode = mode;
             }
         }
-        if let Ok(val) = std::env::var("ADDR") {
+        if let Ok(val) = env::var("ADDR") {
             self.addr = val;
         }
     }
@@ -71,45 +68,22 @@ impl Config {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    include!("config_tests.rs");
-}
-
-fn default_auth_mode() -> AuthMode {
-    AuthMode::Open
-}
-
-fn default_lambda_invoke_mode() -> LambdaInvokeMode {
-    LambdaInvokeMode::Buffered
-}
-
 fn default_addr() -> String {
     "0.0.0.0:8000".to_string()
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum AuthMode {
+    #[default]
     Open,
     ApiKey,
 }
 
-impl Default for AuthMode {
-    fn default() -> Self {
-        AuthMode::Open
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub enum LambdaInvokeMode {
+    #[default]
     Buffered,
     ResponseStream,
-}
-
-impl Default for LambdaInvokeMode {
-    fn default() -> Self {
-        LambdaInvokeMode::Buffered
-    }
 }
 
 impl FromStr for AuthMode {
@@ -135,3 +109,6 @@ impl FromStr for LambdaInvokeMode {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
